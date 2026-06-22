@@ -1,0 +1,385 @@
+/* ── Cabeçalho de página ── */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 16px;
+}
+.page-breadcrumb {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.page-header h1 {
+  margin: 0 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+}
+.page-subtitle {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+/* ── Chip de contagem ── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--blue-light);
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+/* ── Card de cadastro ── */
+.fc-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, .04);
+  overflow: hidden;
+}
+
+.fc-card-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--line);
+  background: #fafbfc;
+}
+
+/* Avatar grande */
+.fc-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #94a3b8;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: -1px;
+  user-select: none;
+  transition: background .3s;
+}
+
+.fc-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.fc-status-tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+.fc-tag-ativo   { background: #dcfce7; color: #166534; }
+.fc-tag-inativo { background: #f1f5f9; color: #64748b; }
+
+/* ── Seções numeradas ── */
+.fc-section {
+  padding: 18px 24px;
+}
+.fc-section + .fc-section {
+  border-top: 1px solid var(--line);
+}
+.fc-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 14px;
+}
+.fc-section-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Grid do form ── */
+.fc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 20px;
+}
+@media (max-width: 640px) {
+  .fc-grid { grid-template-columns: 1fr; }
+}
+
+.fc-card .fg {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.fc-card .fg label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+}
+.fc-card .fg .req {
+  color: var(--red);
+}
+.fc-card .fg input:not([type="checkbox"]),
+.fc-card .fg select {
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 0 10px;
+  background: #fafbfc;
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  width: 100%;
+  transition: border-color .15s, box-shadow .15s;
+}
+.fc-card .fg input:not([type="checkbox"]):focus,
+.fc-card .fg select:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+  background: #fff;
+}
+
+/* Estado de erro */
+.fc-card .fg.has-error input:not([type="checkbox"]),
+.fc-card .fg.has-error select {
+  border-color: var(--red);
+  background: var(--red-light);
+}
+.fc-error {
+  font-size: 11px;
+  color: var(--red);
+  margin-top: 2px;
+}
+
+/* ── Wrapper de senha com botão olho ── */
+.fc-password-wrap {
+  position: relative;
+}
+.fc-password-wrap input {
+  padding-right: 38px !important;
+}
+.fc-eye-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  transition: color .15s;
+  line-height: 0;
+}
+.fc-eye-btn:hover { color: var(--text); }
+.fc-eye-btn:focus-visible { outline: 2px solid var(--blue); border-radius: 4px; }
+
+/* ── Toggle switch ── */
+.fc-toggle-row {
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+.fc-toggle-row > span {
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.fc-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.fc-switch input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.fc-switch-track {
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  background: #d1d5db;
+  position: relative;
+  transition: background .2s;
+  flex-shrink: 0;
+}
+.fc-switch-track::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.fc-switch input:checked ~ .fc-switch-track {
+  background: var(--green);
+}
+.fc-switch input:checked ~ .fc-switch-track::after {
+  transform: translateX(18px);
+}
+.fc-switch input:focus-visible ~ .fc-switch-track {
+  outline: 3px solid rgba(37, 99, 235, .3);
+  outline-offset: 2px;
+}
+
+/* ── Rodapé do form ── */
+.fc-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border-top: 1px solid var(--line);
+  background: #fafbfc;
+}
+.fc-required-note {
+  font-size: 11px;
+  color: var(--muted);
+}
+.fc-form-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* ── Card de listagem ── */
+.fc-list-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, .04);
+}
+.fc-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+  background: #fafbfc;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.fc-list-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.fc-filters {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.fc-filters .input-lite {
+  height: 34px;
+  font-size: 12px;
+  padding: 0 10px;
+  border-radius: 8px;
+}
+.fc-filters input[type="text"].input-lite {
+  width: 200px;
+}
+
+/* ── Células de usuário na tabela ── */
+.fc-cell-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 180px;
+}
+.fc-avatar-sm {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #94a3b8;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  user-select: none;
+}
+.fc-cell-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+.fc-cell-email {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* ── Badges de perfil ── */
+.fc-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.fc-badge-admin       { background: #f5f3ff; color: #5b21b6; }
+.fc-badge-suporte     { background: var(--blue-light); color: var(--blue); }
+.fc-badge-colaborador { background: var(--green-light); color: var(--green); }
+.fc-badge-none        { color: var(--muted); }
+
+/* ── Estado vazio ── */
+.fc-empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 36px !important;
+  font-size: 13px;
+}
+
+/* ── Responsivo: esconde colunas menores ── */
+@media (max-width: 960px) {
+  .fc-col-hide { display: none; }
+  .fc-list-header { flex-direction: column; align-items: flex-start; }
+  .fc-filters { width: 100%; }
+  .fc-filters input[type="text"].input-lite { width: 100%; }
+}

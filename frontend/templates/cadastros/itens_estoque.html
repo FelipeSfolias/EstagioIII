@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Itens de Estoque{% endblock %}
+{% block topbar %}{% endblock %}
+
+{% block content %}
+
+{# ── Cabeçalho ── #}
+<div class="page-header">
+  <div>
+    <div class="page-breadcrumb">Cadastros › Itens de Estoque</div>
+    <h1>
+      Itens de Estoque
+      <span class="chip">{{ total_itens }}</span>
+      {% if alerta_count %}
+        <span class="chip es-chip-alert">{{ alerta_count }} abaixo do mínimo</span>
+      {% endif %}
+    </h1>
+    <p class="page-subtitle">Gerencie materiais, suprimentos e itens de estoque.</p>
+  </div>
+</div>
+
+{# ── Card de cadastro ── #}
+<div class="es-card">
+  <div class="es-card-head">
+    <div id="es-avatar" class="es-avatar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+        <path d="M3 7l9-4 9 4-9 4-9-4z"/>
+        <path d="M3 7v10l9 4 9-4V7"/>
+        <path d="M12 11v10"/>
+      </svg>
+    </div>
+    <div>
+      <div id="es-title" class="es-card-title">Novo item</div>
+      <span id="es-status-tag" class="es-status-tag">—</span>
+    </div>
+  </div>
+
+  <form method="post" id="es-form">
+    {% csrf_token %}
+
+    {# ── Seção 1: Identificação ── #}
+    <div class="es-section">
+      <div class="es-section-title">
+        <span class="es-section-num">1</span> Identificação
+      </div>
+      <div class="es-grid">
+        <div class="fg{% if form.sku.errors %} has-error{% endif %}">
+          <label for="{{ form.sku.id_for_label }}">SKU <span class="req">*</span></label>
+          {{ form.sku }}
+          {% for e in form.sku.errors %}<span class="es-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.nome.errors %} has-error{% endif %}">
+          <label for="{{ form.nome.id_for_label }}">Nome <span class="req">*</span></label>
+          {{ form.nome }}
+          {% for e in form.nome.errors %}<span class="es-error">{{ e }}</span>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# ── Seção 2: Unidade & estoque ── #}
+    <div class="es-section">
+      <div class="es-section-title">
+        <span class="es-section-num">2</span> Unidade &amp; estoque
+      </div>
+      <div class="es-grid">
+        <div class="fg{% if form.unidade.errors %} has-error{% endif %}">
+          <label for="{{ form.unidade.id_for_label }}">Unidade <span class="req">*</span></label>
+          {{ form.unidade }}
+          {% for e in form.unidade.errors %}<span class="es-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.nivel_minimo.errors %} has-error{% endif %}">
+          <label for="{{ form.nivel_minimo.id_for_label }}">Nível mínimo <span class="req">*</span></label>
+          <div class="es-input-with-suffix">
+            {{ form.nivel_minimo }}
+            <span class="es-unit-suffix" id="es-suffix-min">—</span>
+          </div>
+          {% for e in form.nivel_minimo.errors %}<span class="es-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.qtde.errors %} has-error{% endif %}">
+          <label for="{{ form.qtde.id_for_label }}">Quantidade atual <span class="req">*</span></label>
+          <div class="es-input-with-suffix">
+            {{ form.qtde }}
+            <span class="es-unit-suffix" id="es-suffix-qtde">—</span>
+          </div>
+          {% for e in form.qtde.errors %}<span class="es-error">{{ e }}</span>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {% if form.non_field_errors %}
+      <div class="es-section" style="padding-top:0">
+        {% for e in form.non_field_errors %}<span class="es-error">{{ e }}</span>{% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="es-form-footer">
+      <span class="es-required-note">* Campos obrigatórios</span>
+      <div class="es-form-actions">
+        <button type="reset" class="btn-link">Limpar</button>
+        <button type="submit" class="btn">Salvar item</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+{# ── Card de listagem ── #}
+<div class="es-list-card">
+  <div class="es-list-header">
+    <div class="es-list-header-title">
+      Itens cadastrados
+      <span class="chip">{{ total_itens }}</span>
+      <span id="es-alert-chip" class="chip es-chip-alert"
+            {% if not alerta_count %}style="display:none"{% endif %}>
+        {{ alerta_count }} abaixo do mínimo
+      </span>
+    </div>
+    <form method="get" class="es-filters">
+      <input class="input-lite" type="text" name="q" value="{{ request.GET.q }}"
+             placeholder="SKU ou nome...">
+      <select name="unidade" class="input-lite">
+        <option value="">Unidade</option>
+        {% for u in unidades %}
+          <option value="{{ u }}" {% if sel_unidade == u %}selected{% endif %}>{{ u }}</option>
+        {% endfor %}
+      </select>
+      <select name="status" class="input-lite">
+        <option value="">Status</option>
+        <option value="ok"            {% if sel_status == 'ok' %}selected{% endif %}>Em estoque</option>
+        <option value="abaixo_minimo" {% if sel_status == 'abaixo_minimo' %}selected{% endif %}>Abaixo do mínimo</option>
+        <option value="esgotado"      {% if sel_status == 'esgotado' %}selected{% endif %}>Esgotado</option>
+      </select>
+      <button class="btn btn-sm">Filtrar</button>
+      <a class="btn-link btn-sm" href="{% url 'core:cad_itens_estoque' %}">Limpar</a>
+    </form>
+  </div>
+
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Item</th>
+        <th class="es-col-hide">Unid.</th>
+        <th class="es-col-hide" style="text-align:center">Nível mín.</th>
+        <th style="text-align:center">Quantidade</th>
+        <th>Estoque</th>
+        <th style="width:100px">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for i in itens %}
+        <tr class="es-row-{{ i.status_estoque }}">
+          <td>{{ i.id }}</td>
+          <td>
+            <div class="es-cell-item">
+              <div class="es-avatar-sm" data-status="{{ i.status_estoque }}"></div>
+              <div>
+                <div class="es-cell-name">{{ i.nome }}</div>
+                <code class="es-cell-sku">{{ i.sku }}</code>
+              </div>
+            </div>
+          </td>
+          <td class="es-col-hide">{{ i.unidade }}</td>
+          <td class="es-col-hide" style="text-align:center">{{ i.nivel_minimo }}</td>
+          <td style="text-align:center">
+            <div class="es-qty-ctrl"
+                 data-item-id="{{ i.id }}"
+                 data-url="{% url 'core:item_ajustar_qtde' i.id %}">
+              <button class="es-qty-btn es-qty-minus"
+                      data-delta="-1"
+                      aria-label="Remover 1 de {{ i.nome }}"
+                      {% if i.qtde == 0 %}disabled{% endif %}>−</button>
+              <span class="es-qty-val">{{ i.qtde }}</span>
+              <button class="es-qty-btn es-qty-plus"
+                      data-delta="1"
+                      aria-label="Adicionar 1 em {{ i.nome }}">+</button>
+            </div>
+          </td>
+          <td>
+            <span class="es-badge" data-status="{{ i.status_estoque }}">
+              {% if i.status_estoque == 'esgotado' %}Esgotado
+              {% elif i.status_estoque == 'abaixo_minimo' %}Abaixo do mínimo
+              {% else %}Em estoque{% endif %}
+            </span>
+          </td>
+          <td class="tbl-actions">
+            <a class="btn-icon edit" title="Editar" href="{% url 'core:item_editar' i.id %}">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19H4v-3L16.5 3.5z"/>
+                <path d="M15.2 5.2l3.6 3.6"/>
+              </svg>
+            </a>
+            <form method="post" action="{% url 'core:item_excluir' i.id %}" class="inline">
+              {% csrf_token %}
+              <button type="button" class="btn-icon danger" title="Excluir"
+                      onclick="GModal.confirm('Excluir item','Excluir {{ i.nome }}? Esta ação não pode ser desfeita.',this.closest(\'form\'),'Excluir')">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  <path d="M10 11v6M14 11v6"/>
+                </svg>
+              </button>
+            </form>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7" class="es-empty">Nenhum item encontrado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if page_obj.has_other_pages %}
+  <div class="es-pagination">
+    {% if page_obj.has_previous %}
+      <a class="es-page-btn"
+         href="?q={{ request.GET.q }}&unidade={{ request.GET.unidade }}&status={{ request.GET.status }}&page={{ page_obj.previous_page_number }}">‹ Anterior</a>
+    {% endif %}
+    <span class="es-page-info">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+      <a class="es-page-btn"
+         href="?q={{ request.GET.q }}&unidade={{ request.GET.unidade }}&status={{ request.GET.status }}&page={{ page_obj.next_page_number }}">Próxima ›</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/estoque.js' %}" defer></script>
+{% endblock %}

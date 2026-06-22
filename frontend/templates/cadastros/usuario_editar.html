@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Editar Funcionário{% endblock %}
+{% block topbar %}{% endblock %}
+
+{% block content %}
+
+{# ── Cabeçalho ── #}
+<div class="page-header">
+  <div>
+    <div class="page-breadcrumb">
+      <a href="{% url 'core:cad_usuarios' %}" style="color:var(--muted);text-decoration:none">← Funcionários</a>
+    </div>
+    <h1>Editar funcionário</h1>
+  </div>
+</div>
+
+{# ── Card de edição ── #}
+<div class="fc-card">
+  <div class="fc-card-head">
+    <div id="fc-avatar" class="fc-avatar">?</div>
+    <div>
+      <div id="fc-title" class="fc-card-title">{{ func.nome }}</div>
+      {% if func.ativo %}
+        <span id="fc-status-tag" class="fc-status-tag fc-tag-ativo">Ativo</span>
+      {% else %}
+        <span id="fc-status-tag" class="fc-status-tag fc-tag-inativo">Inativo</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <form method="post" id="fc-form">
+    {% csrf_token %}
+
+    {# ── Seção 1: Dados pessoais ── #}
+    <div class="fc-section">
+      <div class="fc-section-title">
+        <span class="fc-section-num">1</span> Dados pessoais
+      </div>
+      <div class="fc-grid">
+        <div class="fg{% if form.nome.errors %} has-error{% endif %}">
+          <label for="{{ form.nome.id_for_label }}">Nome completo <span class="req">*</span></label>
+          {{ form.nome }}
+          {% for e in form.nome.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.cpf.errors %} has-error{% endif %}">
+          <label for="{{ form.cpf.id_for_label }}">CPF <span class="req">*</span></label>
+          {{ form.cpf }}
+          {% for e in form.cpf.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.contato.errors %} has-error{% endif %}">
+          <label for="{{ form.contato.id_for_label }}">Contato</label>
+          {{ form.contato }}
+          {% for e in form.contato.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.email.errors %} has-error{% endif %}">
+          <label for="{{ form.email.id_for_label }}">E-mail corporativo <span class="req">*</span></label>
+          {{ form.email }}
+          {% for e in form.email.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# ── Seção 2: Lotação & função ── #}
+    <div class="fc-section">
+      <div class="fc-section-title">
+        <span class="fc-section-num">2</span> Lotação &amp; função
+      </div>
+      <div class="fc-grid">
+        <div class="fg{% if form.funcao.errors %} has-error{% endif %}">
+          <label for="{{ form.funcao.id_for_label }}">Função</label>
+          {{ form.funcao }}
+          {% for e in form.funcao.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.setor.errors %} has-error{% endif %}">
+          <label for="{{ form.setor.id_for_label }}">Setor</label>
+          {{ form.setor }}
+          {% for e in form.setor.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.ramal.errors %} has-error{% endif %}">
+          <label for="{{ form.ramal.id_for_label }}">Ramal</label>
+          {{ form.ramal }}
+          {% for e in form.ramal.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.ativo_atribuido.errors %} has-error{% endif %}">
+          <label for="{{ form.ativo_atribuido.id_for_label }}">Patrimônio</label>
+          {{ form.ativo_atribuido }}
+          {% for e in form.ativo_atribuido.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.cidade.errors %} has-error{% endif %}">
+          <label for="{{ form.cidade.id_for_label }}">Cidade</label>
+          {{ form.cidade }}
+          {% for e in form.cidade.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.uf.errors %} has-error{% endif %}">
+          <label for="{{ form.uf.id_for_label }}">UF</label>
+          {{ form.uf }}
+          {% for e in form.uf.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# ── Seção 3: Acesso ao sistema ── #}
+    <div class="fc-section">
+      <div class="fc-section-title">
+        <span class="fc-section-num">3</span> Acesso ao sistema
+      </div>
+      <div class="fc-grid">
+        <div class="fg{% if form.username.errors %} has-error{% endif %}">
+          <label for="{{ form.username.id_for_label }}">Login</label>
+          {{ form.username }}
+          {% for e in form.username.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.perfil.errors %} has-error{% endif %}">
+          <label for="{{ form.perfil.id_for_label }}">Perfil</label>
+          {{ form.perfil }}
+          {% for e in form.perfil.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.nova_senha.errors %} has-error{% endif %}">
+          <label for="{{ form.nova_senha.id_for_label }}">
+            Nova senha <small style="font-weight:400;color:var(--muted)">(deixe em branco para manter)</small>
+          </label>
+          <div class="fc-password-wrap">
+            {{ form.nova_senha }}
+            <button type="button" class="fc-eye-btn" data-target="{{ form.nova_senha.id_for_label }}" aria-label="Mostrar senha">
+              <svg class="fc-eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+          {% for e in form.nova_senha.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.confirmar_senha.errors %} has-error{% endif %}">
+          <label for="{{ form.confirmar_senha.id_for_label }}">Confirmar senha</label>
+          <div class="fc-password-wrap">
+            {{ form.confirmar_senha }}
+            <button type="button" class="fc-eye-btn" data-target="{{ form.confirmar_senha.id_for_label }}" aria-label="Mostrar senha">
+              <svg class="fc-eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+          {% for e in form.confirmar_senha.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg fc-toggle-row">
+          <span>Funcionário ativo</span>
+          <label class="fc-switch" for="{{ form.ativo.id_for_label }}">
+            {{ form.ativo }}
+            <span class="fc-switch-track" aria-hidden="true"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    {% if form.non_field_errors %}
+      <div class="fc-section" style="padding-top:0">
+        {% for e in form.non_field_errors %}
+          <span class="fc-error">{{ e }}</span>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="fc-form-footer">
+      <span class="fc-required-note">* Campos obrigatórios</span>
+      <div class="fc-form-actions">
+        <a href="{% url 'core:cad_usuarios' %}" class="btn-link">Cancelar</a>
+        <button type="submit" class="btn">Atualizar funcionário</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/funcionarios.js' %}" defer></script>
+{% endblock %}

@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Abrir Chamado{% endblock %}
+{% block content %}
+
+<form method="post" class="form">
+  {% csrf_token %}
+
+  {% if form.errors %}
+    <ul class="msg error">
+      {% for field in form %}{% for e in field.errors %}<li>{{ field.label }}: {{ e }}</li>{% endfor %}{% endfor %}
+      {% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+
+  <div class="form-grid-2">
+    <div class="fg">
+      <label>Assunto</label>
+      {{ form.assunto }}
+    </div>
+    <div class="fg">
+      <label>Origem</label>
+      {{ form.origem }}
+    </div>
+
+    <div class="fg">
+      <label>Prioridade</label>
+      {% if is_privileged %}
+        {{ form.prioridade }}
+      {% else %}
+        <div class="input-lite" style="color:var(--muted);cursor:default;">Definida pelo TI</div>
+        <input type="hidden" name="prioridade" value="baixa">
+      {% endif %}
+    </div>
+    <div class="fg">
+      <label>Ativo relacionado (opcional)</label>
+      {{ form.ativo }}
+      <div class="ativo-search-wrap" style="position:relative;">
+        <input
+          id="ativo-search-input"
+          type="text"
+          class="input-lite"
+          placeholder="Buscar por patrimônio… ex: Desk-0001"
+          autocomplete="off"
+        >
+        <div id="ativo-search-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--card);border:1px solid var(--border);border-radius:6px;max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.15);"></div>
+      </div>
+      <div id="ativo-selected-tag" style="display:none;margin-top:6px;display:none;align-items:center;gap:6px;background:var(--accent-muted,#e8f0fe);border-radius:4px;padding:4px 10px;font-size:13px;width:fit-content;">
+        <span id="ativo-selected-label"></span>
+        <button type="button" id="ativo-clear-btn" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px;line-height:1;padding:0;">&times;</button>
+      </div>
+    </div>
+
+    <div class="fg full">
+      <label>Descrição</label>
+      {{ form.descricao }}
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn">Abrir Chamado</button>
+    <a class="btn-link" href="{% url 'core:meus_chamados' %}">Cancelar</a>
+  </div>
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const URL_BUSCAR = "{% url 'core:ativo_buscar' %}";
+  const hiddenInput = document.getElementById("id_ativo");
+  const searchInput = document.getElementById("ativo-search-input");
+  const dropdown    = document.getElementById("ativo-search-dropdown");
+  const selectedTag = document.getElementById("ativo-selected-tag");
+  const selectedLbl = document.getElementById("ativo-selected-label");
+  const clearBtn    = document.getElementById("ativo-clear-btn");
+
+  let debounceTimer = null;
+
+  searchInput.addEventListener("input", function () {
+    clearTimeout(debounceTimer);
+    const q = this.value.trim();
+    if (q.length < 1) { hideDropdown(); return; }
+    debounceTimer = setTimeout(() => fetchAtivos(q), 250);
+  });
+
+  searchInput.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") hideDropdown();
+  });
+
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest(".ativo-search-wrap")) hideDropdown();
+  });
+
+  clearBtn.addEventListener("click", function () {
+    hiddenInput.value = "";
+    searchInput.value = "";
+    selectedTag.style.display = "none";
+    searchInput.style.display = "";
+  });
+
+  function fetchAtivos(q) {
+    fetch(`${URL_BUSCAR}?q=${encodeURIComponent(q)}`)
+      .then(r => r.json())
+      .then(data => renderDropdown(data.results))
+      .catch(() => hideDropdown());
+  }
+
+  function renderDropdown(results) {
+    dropdown.innerHTML = "";
+    if (!results.length) {
+      dropdown.innerHTML = '<div style="padding:10px 14px;color:var(--muted);font-size:13px;">Nenhum ativo encontrado</div>';
+      dropdown.style.display = "block";
+      return;
+    }
+    results.forEach(item => {
+      const el = document.createElement("div");
+      el.style.cssText = "padding:8px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);";
+      el.innerHTML = `<strong>${item.patrimonio}</strong> <span style="color:var(--muted);">— ${item.modelo} (${item.categoria})</span>`;
+      el.addEventListener("mouseenter", () => el.style.background = "var(--hover, #f5f5f5)");
+      el.addEventListener("mouseleave", () => el.style.background = "");
+      el.addEventListener("click", () => selectAtivo(item));
+      dropdown.appendChild(el);
+    });
+    dropdown.style.display = "block";
+  }
+
+  function selectAtivo(item) {
+    hiddenInput.value = item.id;
+    selectedLbl.textContent = `${item.patrimonio} — ${item.modelo}`;
+    selectedTag.style.display = "flex";
+    searchInput.style.display = "none";
+    hideDropdown();
+  }
+
+  function hideDropdown() {
+    dropdown.style.display = "none";
+  }
+})();
+</script>
+{% endblock %}

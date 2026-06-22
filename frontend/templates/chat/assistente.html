@@ -1,0 +1,709 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Assistente{% endblock %}
+
+{% block content %}
+<style>
+/* ── Sobreposição de layout para a página de chat ── */
+.content { overflow: hidden; }
+
+/* ── Page ── */
+.ct-page {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 16px;
+  height: calc(100vh - 115px);
+  overflow: hidden;
+}
+
+/* ── Chat card ── */
+.ct-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── Chat header ── */
+.ct-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.ct-bot-info { display: flex; align-items: center; gap: 11px; }
+.ct-bot-av {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(37,99,235,.3);
+  flex-shrink: 0;
+}
+.ct-bot-name-row { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; }
+.ct-bot-name { font-size: 14px; font-weight: 700; }
+.ct-badge-ia {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  color: var(--purple); background: var(--purple-light);
+  border: 1px solid #e9d8fd; border-radius: 10px;
+  padding: 1px 6px; letter-spacing: .3px;
+}
+.ct-bot-status { display: flex; align-items: center; gap: 6px; }
+.ct-online-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--green); box-shadow: 0 0 0 3px var(--green-light);
+  flex-shrink: 0;
+}
+.ct-online-txt { font-size: 11.5px; color: var(--muted); }
+.ct-header-btns { display: flex; gap: 8px; }
+.ct-icon-btn {
+  width: 32px; height: 32px;
+  border: 1px solid var(--line); border-radius: 7px;
+  background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted); transition: background .12s;
+}
+.ct-icon-btn:hover { background: var(--bg); }
+
+/* ── Messages ── */
+.ct-msgs {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  padding: 22px 24px;
+  display: flex; flex-direction: column;
+  gap: 16px;
+  scroll-behavior: smooth;
+}
+.ct-msgs::-webkit-scrollbar { width: 9px; }
+.ct-msgs::-webkit-scrollbar-track { background: transparent; }
+.ct-msgs::-webkit-scrollbar-thumb {
+  background: #dfe3e8; border-radius: 9px;
+  border: 2px solid transparent; background-clip: content-box;
+}
+.ct-msgs { scrollbar-width: thin; scrollbar-color: #dfe3e8 transparent; }
+
+/* Day separator */
+.ct-sep-day {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  color: var(--muted); letter-spacing: .5px;
+}
+.ct-sep-day::before, .ct-sep-day::after {
+  content: ''; flex: 1; height: 1px; background: var(--line);
+}
+
+/* Message rows */
+.ct-msg { display: flex; gap: 9px; align-items: flex-start; }
+.ct-msg-user { flex-direction: row-reverse; }
+
+/* Avatars */
+.ct-av-bot, .ct-av-user {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.ct-av-bot  { background: linear-gradient(135deg, #2563eb, #7c3aed); }
+.ct-av-user { background: var(--blue); color: #fff; font-size: 11px; font-weight: 700; }
+
+/* Message body */
+.ct-msg-body { display: flex; flex-direction: column; gap: 5px; max-width: 80%; min-width: 0; }
+.ct-msg-user .ct-msg-body { align-items: flex-end; }
+
+/* Bubbles */
+.ct-bubble {
+  border-radius: 12px; padding: 11px 14px;
+  font-size: 13px; line-height: 1.55; word-break: break-word;
+}
+.ct-bubble-bot {
+  background: var(--bg); border: 1px solid var(--line);
+  border-top-left-radius: 4px;
+}
+.ct-bubble-bot p  { margin: 0 0 7px; }
+.ct-bubble-bot p:last-child { margin-bottom: 0; }
+.ct-bubble-bot ol, .ct-bubble-bot ul { margin: 5px 0; padding-left: 18px; }
+.ct-bubble-bot li { margin-bottom: 4px; }
+.ct-bubble-bot strong { color: var(--text); }
+.ct-bubble-bot code {
+  background: #e8ecf0; padding: 1px 5px; border-radius: 4px;
+  font-family: monospace; font-size: 12px;
+}
+.ct-bubble-user { background: var(--blue); color: #fff; border-top-right-radius: 4px; }
+
+/* Timestamp */
+.ct-time { font-size: 10.5px; color: var(--muted); padding: 0 2px; }
+.ct-time-r { text-align: right; }
+
+/* Chips */
+.ct-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.ct-chip {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 18px; padding: 7px 13px;
+  font-size: 12.5px; font-weight: 600; color: var(--blue);
+  transition: background .12s, border-color .12s;
+  cursor: pointer;
+}
+.ct-chip:hover { background: var(--blue-light); border-color: var(--blue); }
+
+/* Typing */
+.ct-typing .ct-bubble-bot {
+  display: flex; align-items: center; gap: 5px; padding: 13px 16px;
+}
+.ct-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--muted);
+  animation: ct-blink 1.4s infinite ease-in-out;
+}
+.ct-dot:nth-child(2) { animation-delay: .2s; }
+.ct-dot:nth-child(3) { animation-delay: .4s; }
+@keyframes ct-blink {
+  0%, 80%, 100% { transform: translateY(0); opacity: .35; }
+  40%           { transform: translateY(-3px); opacity: 1; }
+}
+
+/* Draft card */
+.ct-draft {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 9px; overflow: hidden;
+  max-width: 360px; margin-top: 8px;
+}
+.ct-draft-head {
+  background: var(--blue-light); border-bottom: 1px solid #dbe6fb;
+  padding: 8px 12px;
+  display: flex; align-items: center; gap: 7px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .5px; color: var(--blue);
+}
+.ct-draft-body { padding: 11px 12px; display: flex; flex-direction: column; gap: 8px; }
+.ct-draft-row  { display: flex; align-items: flex-start; gap: 8px; }
+.ct-draft-k {
+  width: 78px; flex-shrink: 0;
+  font-size: 11px; text-transform: uppercase; letter-spacing: .3px;
+  color: var(--muted); padding-top: 2px;
+}
+.ct-draft-v { font-size: 13px; font-weight: 500; }
+.ct-draft-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+.ct-draft-alta  { background: var(--red-light);    color: var(--red);    }
+.ct-draft-media { background: var(--yellow-light);  color: var(--yellow); }
+.ct-draft-baixa { background: var(--green-light);   color: var(--green);  }
+.ct-draft-footer {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; border-top: 1px solid var(--line); background: #fafbfc;
+}
+.ct-draft-open {
+  display: inline-flex; align-items: center;
+  padding: 7px 14px; background: var(--blue); color: #fff;
+  border-radius: 7px; font-size: 12.5px; font-weight: 600;
+  transition: background .12s;
+}
+.ct-draft-open:hover { background: #1d4ed8; color: #fff; }
+
+/* ── Composer ── */
+.ct-composer {
+  flex-shrink: 0; border-top: 1px solid var(--line); padding: 12px 16px 14px;
+}
+.ct-composer-box {
+  display: flex; align-items: flex-end; gap: 8px;
+  border: 1px solid var(--line); border-radius: 12px;
+  padding: 8px 8px 8px 12px; background: var(--surface);
+  transition: border-color .15s, box-shadow .15s;
+}
+.ct-composer-box:focus-within {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+}
+.ct-attach {
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; color: var(--muted);
+  border-radius: 6px; flex-shrink: 0; transition: background .12s;
+  cursor: pointer;
+}
+.ct-attach:hover { background: var(--bg); }
+.ct-ta {
+  flex: 1; border: none; outline: none;
+  background: transparent; resize: none;
+  font-family: inherit; font-size: 13px; color: var(--text);
+  line-height: 1.5; min-height: 22px; max-height: 120px;
+  overflow-y: auto; padding: 3px 0;
+}
+.ct-ta::placeholder { color: var(--muted); }
+.ct-send {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 15px; background: var(--blue); color: #fff;
+  border-radius: 9px; font-size: 13px; font-weight: 600;
+  flex-shrink: 0; transition: background .12s, opacity .15s;
+  cursor: pointer;
+}
+.ct-send:hover:not(:disabled) { background: #1d4ed8; }
+.ct-send:disabled { opacity: .45; cursor: default; }
+.ct-hint {
+  display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+  margin-top: 8px; font-size: 11px; color: var(--muted);
+}
+kbd {
+  background: #f1f5f9; border: 1px solid var(--line);
+  border-radius: 4px; padding: 1px 5px;
+  font-size: 10.5px; font-family: inherit;
+}
+
+/* ── Sidebar ── */
+.ct-sidebar {
+  display: flex; flex-direction: column;
+  gap: 12px; overflow-y: auto; min-height: 0;
+  scrollbar-width: thin; scrollbar-color: #dfe3e8 transparent;
+}
+.ct-sidebar::-webkit-scrollbar { width: 7px; }
+.ct-sidebar::-webkit-scrollbar-thumb { background: #dfe3e8; border-radius: 7px; }
+
+.ct-side-card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.05);
+  overflow: hidden;
+}
+.ct-side-head {
+  padding: 11px 14px; border-bottom: 1px solid var(--line);
+  font-size: 12px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .4px; color: var(--muted);
+}
+.ct-side-body { padding: 10px; }
+
+/* Quick actions */
+.ct-qa {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border: 1px solid var(--line);
+  border-radius: 8px; background: transparent;
+  text-align: left; width: 100%;
+  transition: background .12s, border-color .12s;
+  margin-bottom: 6px; cursor: pointer;
+}
+.ct-qa:last-child { margin-bottom: 0; }
+.ct-qa:hover { background: var(--blue-light); border-color: var(--blue); }
+.ct-qa-ico {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.ico-blue   { background: var(--blue-light);   color: var(--blue);   }
+.ico-green  { background: var(--green-light);  color: var(--green);  }
+.ico-orange { background: var(--orange-light); color: var(--orange); }
+.ct-qa-txt  { flex: 1; min-width: 0; text-align: left; }
+.ct-qa-name { font-size: 13px; font-weight: 600; color: var(--text); display: block; }
+.ct-qa-desc { font-size: 11.5px; color: var(--muted); margin-top: 1px; display: block; }
+.ct-qa-chev { color: var(--muted); flex-shrink: 0; }
+
+/* What I do */
+.ct-do-list { display: flex; flex-direction: column; gap: 9px; }
+.ct-do-item { display: flex; align-items: flex-start; gap: 9px; }
+.ct-do-check {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--green-light); color: var(--green);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.ct-do-txt { font-size: 12.5px; color: var(--text); line-height: 1.4; padding-top: 2px; }
+
+/* Security note */
+.ct-sec-note {
+  background: var(--bg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 11px 12px;
+  display: flex; gap: 9px; align-items: flex-start;
+}
+.ct-sec-ico { color: var(--blue); flex-shrink: 0; margin-top: 1px; }
+.ct-sec-txt { font-size: 12px; color: var(--muted); line-height: 1.45; }
+
+/* ── Responsive ── */
+@media (max-width: 1040px) {
+  .ct-page { grid-template-columns: 1fr; }
+  .ct-sidebar { display: none; }
+}
+</style>
+
+<!-- ── Page ── -->
+<div class="ct-page">
+
+  <!-- ── Chat card ── -->
+  <div class="ct-card">
+
+    <!-- Header -->
+    <div class="ct-header">
+      <div class="ct-bot-info">
+        <div class="ct-bot-av">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L13.8 9.2L21 11L13.8 12.8L12 20L10.2 12.8L3 11L10.2 9.2Z" fill="white" fill-opacity=".95"/>
+            <circle cx="19" cy="5.5" r="1.6" fill="white" fill-opacity=".7"/>
+          </svg>
+        </div>
+        <div>
+          <div class="ct-bot-name-row">
+            <span class="ct-bot-name">Assistente Estágio</span>
+            <span class="ct-badge-ia">IA</span>
+          </div>
+          <div class="ct-bot-status">
+            <span class="ct-online-dot"></span>
+            <span class="ct-online-txt">Online · responde em segundos</span>
+          </div>
+        </div>
+      </div>
+      <div class="ct-header-btns">
+        <button class="ct-icon-btn" id="ct-btn-new" title="Nova conversa">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>
+          </svg>
+        </button>
+        <button class="ct-icon-btn" id="ct-btn-hist" title="Histórico">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="ct-msgs" id="ct-msgs"></div>
+
+    <!-- Composer -->
+    <div class="ct-composer">
+      <div class="ct-composer-box">
+        <button class="ct-attach" type="button" title="Anexar arquivo">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/>
+          </svg>
+        </button>
+        <textarea class="ct-ta" id="ct-input" rows="1"
+          placeholder="Descreva seu problema — eu te ajudo a diagnosticar ou te indico como abrir um chamado…"></textarea>
+        <button class="ct-send" id="ct-send" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2" fill="currentColor"/>
+          </svg>
+          Enviar
+        </button>
+      </div>
+      <div class="ct-hint">
+        <kbd>Enter</kbd> envia
+        <span style="opacity:.4">·</span>
+        <kbd>Shift+Enter</kbd> quebra linha
+        <span style="opacity:.35;margin-left:4px">·</span>
+        <span>O assistente pode cometer erros — confira informações críticas.</span>
+      </div>
+    </div>
+
+  </div><!-- /ct-card -->
+
+  <!-- ── Sidebar ── -->
+  <div class="ct-sidebar">
+
+    <!-- Quick actions -->
+    <div class="ct-side-card">
+      <div class="ct-side-head">Ações rápidas</div>
+      <div class="ct-side-body">
+        <button class="ct-qa" data-send="Como faço para abrir um chamado?">
+          <span class="ct-qa-ico ico-blue">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="5" y="2" width="14" height="20" rx="2"/>
+              <line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="12" y2="11"/>
+            </svg>
+          </span>
+          <span class="ct-qa-txt">
+            <span class="ct-qa-name">Como abrir um chamado</span>
+            <span class="ct-qa-desc">Te indico o caminho na tela de chamados</span>
+          </span>
+          <svg class="ct-qa-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+        <button class="ct-qa" data-send="Qual o status dos meus chamados?">
+          <span class="ct-qa-ico ico-green">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+            </svg>
+          </span>
+          <span class="ct-qa-txt">
+            <span class="ct-qa-name">Status do meu chamado</span>
+            <span class="ct-qa-desc">Consulte andamento e SLA</span>
+          </span>
+          <svg class="ct-qa-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+        <button class="ct-qa" data-send="Preciso resetar minha senha">
+          <span class="ct-qa-ico ico-orange">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+            </svg>
+          </span>
+          <span class="ct-qa-txt">
+            <span class="ct-qa-name">Resetar senha</span>
+            <span class="ct-qa-desc">Rede, e-mail ou sistemas</span>
+          </span>
+          <svg class="ct-qa-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- O que eu faço -->
+    <div class="ct-side-card">
+      <div class="ct-side-head">O que eu faço</div>
+      <div class="ct-side-body">
+        <div class="ct-do-list">
+          <div class="ct-do-item">
+            <span class="ct-do-check">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            </span>
+            <span class="ct-do-txt">Te oriento a abrir o chamado certo, com a categoria e prioridade adequadas</span>
+          </div>
+          <div class="ct-do-item">
+            <span class="ct-do-check">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            </span>
+            <span class="ct-do-txt">Resolve problemas simples com passo a passo guiado</span>
+          </div>
+          <div class="ct-do-item">
+            <span class="ct-do-check">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            </span>
+            <span class="ct-do-txt">Consulta status e SLA dos seus chamados</span>
+          </div>
+          <div class="ct-do-item">
+            <span class="ct-do-check">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            </span>
+            <span class="ct-do-txt">Quando precisa do time de TI, te oriento a abrir o chamado no sistema</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Nota de segurança -->
+    <div class="ct-sec-note">
+      <svg class="ct-sec-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span class="ct-sec-txt">Não compartilhe senhas no chat — use o fluxo de reset seguro.</span>
+    </div>
+
+  </div><!-- /ct-sidebar -->
+
+</div><!-- /ct-page -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* === Config === */
+const FIRST_NAME    = "{{ first_name|escapejs }}";
+const USER_INITIALS = "{{ user_initials|escapejs }}";
+const CSRF_TOKEN    = "{{ csrf_token }}";
+const ABRIR_URL     = "{% url 'core:chamado_novo' %}";
+
+const msgsEl  = document.getElementById('ct-msgs');
+const inputEl = document.getElementById('ct-input');
+const sendEl  = document.getElementById('ct-send');
+
+const SPARKLE_SM = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+  <path d="M12 2L13.8 9.2L21 11L13.8 12.8L12 20L10.2 12.8L3 11L10.2 9.2Z" fill="white" fill-opacity=".95"/>
+  <circle cx="19" cy="5.5" r="1.6" fill="white" fill-opacity=".7"/>
+</svg>`;
+
+/* === Helpers === */
+function nowTime() {
+  return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+function scrollEnd() { msgsEl.scrollTop = msgsEl.scrollHeight; }
+function updateSend() { sendEl.disabled = inputEl.value.trim() === ''; }
+function autoGrow() {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+}
+
+/* === DOM builders === */
+function addSepDay(label) {
+  const el = document.createElement('div');
+  el.className = 'ct-sep-day';
+  el.textContent = label;
+  msgsEl.appendChild(el);
+}
+
+function addBotMsg(html, chips) {
+  const div = document.createElement('div');
+  div.className = 'ct-msg';
+  div.innerHTML = `
+    <div class="ct-av-bot">${SPARKLE_SM}</div>
+    <div class="ct-msg-body">
+      <div class="ct-bubble ct-bubble-bot">${html}</div>
+      ${chips ? buildChips(chips) : ''}
+      <div class="ct-time">${nowTime()}</div>
+    </div>`;
+  msgsEl.appendChild(div);
+  scrollEnd();
+  return div;
+}
+
+function addUserMsg(text) {
+  const div = document.createElement('div');
+  div.className = 'ct-msg ct-msg-user';
+  const bubble = document.createElement('div');
+  bubble.className = 'ct-bubble ct-bubble-user';
+  bubble.textContent = text; // XSS-safe: textContent, never innerHTML
+  const ts = document.createElement('div');
+  ts.className = 'ct-time ct-time-r';
+  ts.textContent = nowTime();
+  const body = document.createElement('div');
+  body.className = 'ct-msg-body';
+  body.appendChild(bubble);
+  body.appendChild(ts);
+  const av = document.createElement('div');
+  av.className = 'ct-av-user';
+  av.textContent = USER_INITIALS;
+  div.appendChild(body);
+  div.appendChild(av);
+  msgsEl.appendChild(div);
+  scrollEnd();
+}
+
+function buildChips(chips) {
+  return '<div class="ct-chips">' + chips.map(c =>
+    `<button class="ct-chip" onclick="triggerSend(this)" data-send="${c.replace(/"/g,'&quot;')}">${c}</button>`
+  ).join('') + '</div>';
+}
+
+function showTyping() {
+  const old = document.getElementById('ct-typing');
+  if (old) old.remove();
+  const div = document.createElement('div');
+  div.className = 'ct-msg ct-typing';
+  div.id = 'ct-typing';
+  div.innerHTML = `
+    <div class="ct-av-bot">${SPARKLE_SM}</div>
+    <div class="ct-msg-body">
+      <div class="ct-bubble ct-bubble-bot">
+        <span class="ct-dot"></span>
+        <span class="ct-dot"></span>
+        <span class="ct-dot"></span>
+      </div>
+    </div>`;
+  msgsEl.appendChild(div);
+  scrollEnd();
+  return div;
+}
+
+function addDraftCard(data) {
+  const prioMap = {
+    alta:  ['ct-draft-alta',  'Alta'],
+    media: ['ct-draft-media', 'Média'],
+    baixa: ['ct-draft-baixa', 'Baixa'],
+  };
+  const [cls, label] = prioMap[data.prioridade] || ['ct-draft-media', data.prioridade];
+  const url = ABRIR_URL + '?assunto=' + encodeURIComponent(data.assunto)
+            + '&prioridade=' + encodeURIComponent(data.prioridade);
+  const card = document.createElement('div');
+  card.className = 'ct-draft';
+  card.innerHTML = `
+    <div class="ct-draft-head">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="5" y="2" width="14" height="20" rx="2"/>
+        <line x1="9" y1="7" x2="15" y2="7"/>
+        <line x1="9" y1="11" x2="15" y2="11"/>
+        <line x1="9" y1="15" x2="12" y2="15"/>
+      </svg>
+      Rascunho de Chamado
+    </div>
+    <div class="ct-draft-body">
+      <div class="ct-draft-row">
+        <span class="ct-draft-k">Assunto</span>
+        <span class="ct-draft-v">${data.assunto}</span>
+      </div>
+      <div class="ct-draft-row">
+        <span class="ct-draft-k">Categoria</span>
+        <span class="ct-draft-v">${data.categoria}</span>
+      </div>
+      <div class="ct-draft-row">
+        <span class="ct-draft-k">Prioridade</span>
+        <span class="ct-draft-v"><span class="ct-draft-badge ${cls}">${label}</span></span>
+      </div>
+      <div class="ct-draft-row">
+        <span class="ct-draft-k">Ativo</span>
+        <span class="ct-draft-v">${data.ativo}</span>
+      </div>
+    </div>
+    <div class="ct-draft-footer">
+      <a href="${url}" class="ct-draft-open">Revisar e abrir</a>
+      <button class="ct-chip" onclick="triggerSend(this)" data-send="Quero ajustar o rascunho">Ajustar</button>
+    </div>`;
+  const bodies = msgsEl.querySelectorAll('.ct-msg:not(.ct-msg-user) .ct-msg-body');
+  const last = bodies[bodies.length - 1];
+  if (last) last.appendChild(card);
+  scrollEnd();
+}
+
+/* === Chat routing === */
+const RESPONDER_URL = "{% url 'core:assistente_responder' %}";
+
+function triggerSend(btn) { send(btn.dataset.send); }
+
+async function send(text) {
+  text = (text !== undefined ? text : inputEl.value).trim();
+  if (!text) return;
+  inputEl.value = '';
+  updateSend();
+  autoGrow();
+  addUserMsg(text);
+  sendEl.disabled = true;
+  const typingEl = showTyping();
+  try {
+    const res = await fetch(RESPONDER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+      body: JSON.stringify({ text }),
+    });
+    const data = await res.json();
+    typingEl.remove();
+    addBotMsg(data.html || '<p>Sem resposta do servidor.</p>', data.chips?.length ? data.chips : null);
+  } catch (_) {
+    typingEl.remove();
+    addBotMsg('<p>Falha ao conectar com o servidor. Verifique sua conexão e tente novamente.</p>',
+              ['Tentar novamente']);
+  } finally {
+    sendEl.disabled = inputEl.value.trim() === '';
+  }
+}
+
+/* === Greet === */
+async function greet() {
+  msgsEl.innerHTML = '';
+  addSepDay('Hoje');
+  addBotMsg(
+    `<p>Oi, ${FIRST_NAME} 👋 Sou seu assistente de TI. Te ajudo a diagnosticar problemas, oriento como abrir um chamado na tela de chamados e mostro como acompanhar seus atendimentos.</p>
+     <p>Como posso ajudar hoje?</p>`,
+    ['Meu Wi-Fi caiu', 'Resetar senha', 'Status do meu chamado', 'Como abrir um chamado']
+  );
+  // Limpa histórico de conversa no servidor
+  fetch(RESPONDER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+    body: JSON.stringify({ action: 'clear' }),
+  }).catch(() => {});
+}
+
+/* === Events === */
+inputEl.addEventListener('input',   () => { updateSend(); autoGrow(); });
+inputEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    if (!sendEl.disabled) send();
+  }
+});
+sendEl.addEventListener('click', () => send());
+
+document.getElementById('ct-btn-new').addEventListener('click', () => greet());
+document.getElementById('ct-btn-hist').addEventListener('click', () => {
+  addBotMsg('<p>O histórico de conversas anteriores não está disponível neste momento.</p>');
+});
+
+document.querySelectorAll('.ct-qa').forEach(btn => {
+  btn.addEventListener('click', () => send(btn.dataset.send));
+});
+
+/* === Init === */
+greet();
+</script>
+{% endblock %}

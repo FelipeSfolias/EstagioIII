@@ -1,0 +1,923 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Abrir Chamado{% endblock %}
+{% block topbar %}{% endblock %}
+
+{% block content %}
+<form id="chamado-form" method="post" enctype="multipart/form-data" action="{% url 'core:chamado_criar_tier' %}">
+{% csrf_token %}
+
+{# ── Hero ── #}
+<div class="cf-hero">
+  <div>
+    <div class="cf-hero-id">Novo Registro</div>
+    <h2 class="cf-hero-title">Abrir Chamado</h2>
+    <p class="cf-hero-sub">
+      Preencha os campos para registrar sua solicitação.
+      Campos com <span class="cf-req">*</span> são obrigatórios.
+    </p>
+  </div>
+  <div class="cf-hero-meta">
+    <span>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a8.5 8.5 0 0 1 13 0"/></svg>
+      Solicitante: <strong>{{ user_nome }}</strong>
+    </span>
+    <span>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      {% now "d/m/Y · H:i" %}
+    </span>
+  </div>
+</div>
+
+{# ── Page grid ── #}
+<div class="cf-page">
+
+  {# ── Col main ── #}
+  <div class="cf-col-main">
+
+    {# ── Card 0: Solicitante (admin only) ── #}
+    {% if is_admin %}
+    <div class="card ch-card">
+      <div class="ch-card-header">
+        <div class="cf-card-header-left">
+          <span class="cf-card-step" aria-hidden="true">0</span>
+          <span class="ch-card-title">Solicitante</span>
+        </div>
+        <span class="cf-card-sub">Abrir em nome de outro usuário</span>
+      </div>
+      <div class="cf-card-body">
+        <input type="hidden" id="id_solicitante" name="solicitante_id">
+
+        <div class="cf-form-group">
+          <label class="cf-form-label" for="id_user_search">Colaborador <span class="cf-req">*</span></label>
+
+          {# Campo de busca #}
+          <div class="cf-input-with-icon" id="user-search-wrap">
+            <span class="cf-input-icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="7"/><path d="m21 21-3.8-3.8"/>
+              </svg>
+            </span>
+            <input
+              id="id_user_search" type="text" class="cf-form-input"
+              placeholder="Buscar por nome, e-mail ou ramal…"
+              autocomplete="off" aria-label="Buscar colaborador" aria-haspopup="listbox"
+              aria-expanded="false" aria-controls="user-dropdown"
+            >
+            <button
+              type="button" class="cf-input-clear" id="user-clear"
+              title="Limpar busca" aria-label="Limpar busca de colaborador"
+            >&times;</button>
+          </div>
+
+          {# Dropdown de resultados #}
+          <div class="cf-user-dropdown" id="user-dropdown" role="listbox" aria-label="Colaboradores encontrados"></div>
+
+          {# Chip do usuário selecionado #}
+          <div class="cf-user-chip" id="user-chip" style="display:none" aria-live="polite">
+            <span class="cf-user-avatar" id="user-chip-avatar">?</span>
+            <div class="cf-user-chip-info">
+              <span id="user-chip-name"></span>
+              <span id="user-chip-email" style="font-size:.75rem;color:var(--text-secondary)"></span>
+            </div>
+            <button
+              type="button" class="cf-user-chip-clear" id="user-chip-clear"
+              title="Remover solicitante" aria-label="Remover solicitante selecionado"
+            >&times;</button>
+          </div>
+
+          <div class="cf-classif-error" id="user-error" role="alert">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+            </svg>
+            Selecione o colaborador para continuar.
+          </div>
+        </div>
+
+        {# Sub-card com informações do colaborador #}
+        <div class="cf-user-info" id="user-info" style="display:none" aria-live="polite">
+          <div class="cf-user-info-row">
+            <span class="cf-user-info-label">Função</span>
+            <span class="cf-user-info-value" id="user-info-funcao">—</span>
+          </div>
+          <div class="cf-user-info-row">
+            <span class="cf-user-info-label">Setor</span>
+            <span class="cf-user-info-value" id="user-info-setor">—</span>
+          </div>
+          <div class="cf-user-info-row">
+            <span class="cf-user-info-label">Ramal</span>
+            <span class="cf-user-info-value" id="user-info-ramal">—</span>
+          </div>
+          <div class="cf-user-info-row">
+            <span class="cf-user-info-label">Ativos</span>
+            <span class="cf-user-info-value" id="user-info-ativos">—</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    {% endif %}
+
+    {# ── Card 1: Detalhes ── #}
+    <div class="card ch-card">
+      <div class="ch-card-header">
+        <div class="cf-card-header-left">
+          <span class="cf-card-step" aria-hidden="true">1</span>
+          <span class="ch-card-title">Detalhes do chamado</span>
+        </div>
+        <span class="cf-card-sub">Identifique a solicitação</span>
+      </div>
+      <div class="cf-card-body">
+
+        {# Assunto #}
+        <div class="cf-form-group">
+          <label class="cf-form-label" for="id_assunto">Assunto <span class="cf-req">*</span></label>
+          <input
+            id="id_assunto" name="assunto" type="text"
+            class="cf-form-input" maxlength="120"
+            placeholder="Ex.: Notebook não liga após atualização do Windows"
+            autocomplete="off" required
+          >
+          <span class="cf-form-hint">Seja específico — um bom assunto agiliza a triagem.</span>
+        </div>
+
+        {# Origem #}
+        <div class="cf-form-group">
+          <span class="cf-form-label">Origem <span class="cf-req">*</span></span>
+          <div class="cf-origin-group" role="radiogroup" aria-label="Origem">
+
+            <label class="origin-card">
+              <input type="radio" name="origem" value="portal" checked>
+              <span class="origin-card-icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="12" rx="2"/><path d="M7 20h10"/>
+                </svg>
+              </span>
+              <span class="origin-card-name">Portal</span>
+            </label>
+
+            <label class="origin-card">
+              <input type="radio" name="origem" value="email">
+              <span class="origin-card-icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 4-10 9L2 4"/>
+                </svg>
+              </span>
+              <span class="origin-card-name">E-mail</span>
+            </label>
+
+            <label class="origin-card">
+              <input type="radio" name="origem" value="telefone">
+              <span class="origin-card-icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.21h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 15v1.92z"/>
+                </svg>
+              </span>
+              <span class="origin-card-name">Telefone</span>
+            </label>
+
+            <label class="origin-card">
+              <input type="radio" name="origem" value="presencial">
+              <span class="origin-card-icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="7" r="4"/><path d="M5.5 21a8.5 8.5 0 0 1 13 0"/>
+                </svg>
+              </span>
+              <span class="origin-card-name">Presencial</span>
+            </label>
+
+          </div>
+        </div>
+
+        {# Classificação: Departamento + Tópico #}
+        <div class="cf-form-group" id="classif-group">
+          <span class="cf-form-label">Classificação <span class="cf-req">*</span></span>
+          <div class="cf-form-row cols-2">
+            <div class="cf-select-wrap">
+              <select
+                id="id_departamento" name="departamento"
+                class="cf-form-select" aria-label="Departamento"
+              >
+                <option value="">— Selecione o Departamento —</option>
+                {% for dept in departamentos %}
+                <option value="{{ dept.pk }}">{{ dept.nome }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="cf-select-wrap">
+              <select
+                id="id_topico" name="topico"
+                class="cf-form-select" aria-label="Tópico" disabled
+              >
+                <option value="">— Selecione um departamento primeiro —</option>
+              </select>
+            </div>
+          </div>
+          <div class="cf-classif-error" id="classif-error" role="alert">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+            </svg>
+            Selecione o departamento e o tópico para continuar.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    {# ── Card 2: Prioridade ── #}
+    <div class="card ch-card">
+      <div class="ch-card-header">
+        <div class="cf-card-header-left">
+          <span class="cf-card-step" aria-hidden="true">2</span>
+          <span class="ch-card-title">Prioridade</span>
+        </div>
+        <span class="cf-card-sub">A definição final é feita pelo TI</span>
+      </div>
+      <div class="cf-card-body">
+        <p class="cf-prio-help">Defina a prioridade conforme a urgência. Padrão sugerido: <strong>Baixa</strong>.</p>
+        <div class="cf-priority-group" role="radiogroup" aria-label="Prioridade">
+
+          <label class="priority-chip">
+            <input type="radio" name="prioridade" value="baixa" checked>
+            <div class="priority-chip-top">
+              <span class="priority-dot" style="background:var(--green)"></span>
+              <span class="priority-name">Baixa</span>
+              <span class="priority-sla">72h</span>
+            </div>
+            <span class="priority-desc">Sem impacto imediato no trabalho.</span>
+          </label>
+
+          <label class="priority-chip">
+            <input type="radio" name="prioridade" value="media">
+            <div class="priority-chip-top">
+              <span class="priority-dot" style="background:var(--yellow)"></span>
+              <span class="priority-name">Média</span>
+              <span class="priority-sla">24h</span>
+            </div>
+            <span class="priority-desc">Afeta parcialmente minha rotina.</span>
+          </label>
+
+          <label class="priority-chip">
+            <input type="radio" name="prioridade" value="alta">
+            <div class="priority-chip-top">
+              <span class="priority-dot" style="background:var(--orange)"></span>
+              <span class="priority-name">Alta</span>
+              <span class="priority-sla">8h</span>
+            </div>
+            <span class="priority-desc">Estou impedido(a) de trabalhar.</span>
+          </label>
+
+          <label class="priority-chip">
+            <input type="radio" name="prioridade" value="critica">
+            <div class="priority-chip-top">
+              <span class="priority-dot" style="background:var(--red)"></span>
+              <span class="priority-name">Crítica</span>
+              <span class="priority-sla">2h</span>
+            </div>
+            <span class="priority-desc">Sistema parado / vários usuários.</span>
+          </label>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── Card 3: Descrição ── #}
+    <div class="card ch-card">
+      <div class="ch-card-header">
+        <div class="cf-card-header-left">
+          <span class="cf-card-step" aria-hidden="true">3</span>
+          <span class="ch-card-title">Descrição e contexto</span>
+        </div>
+        <span class="cf-card-sub">Quanto mais detalhe, melhor</span>
+      </div>
+      <div class="cf-card-body">
+
+        {# Ativo relacionado #}
+        <div class="cf-form-group">
+          <label class="cf-form-label" for="id_ativo_search">
+            Ativo relacionado
+            <span class="cf-opt">opcional</span>
+          </label>
+          <input type="hidden" id="id_ativo" name="ativo">
+          <div class="cf-input-with-icon" id="ativo-wrap">
+            <span class="cf-input-icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="7"/><path d="m21 21-3.8-3.8"/>
+              </svg>
+            </span>
+            <input
+              id="id_ativo_search" type="text" class="cf-form-input"
+              placeholder="Buscar por patrimônio… ex.: Desk-0001"
+              autocomplete="off" aria-label="Buscar ativo por patrimônio"
+            >
+            <button
+              type="button" class="cf-input-clear" id="ativo-clear"
+              title="Limpar ativo" aria-label="Limpar ativo selecionado"
+            >&times;</button>
+          </div>
+          {% if ativos_recentes %}
+          <div class="cf-asset-suggestions" id="asset-suggestions">
+            {% for a in ativos_recentes %}
+            <button
+              type="button" class="asset-suggest-chip"
+              data-value="{{ a.patrimonio }}"
+              title="{{ a.patrimonio }} — {{ a.modelo|default:a.categoria }}"
+            >
+              <span class="asset-suggest-tag">{{ a.categoria|upper|truncatechars:8 }}</span>
+              {{ a.patrimonio }}
+            </button>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
+        {# Descrição #}
+        <div class="cf-form-group">
+          <label class="cf-form-label" for="id_descricao">Descrição <span class="cf-req">*</span></label>
+          <div class="cf-desc-wrap">
+            <div class="cf-desc-toolbar" role="toolbar" aria-label="Formatação">
+              <button type="button" class="cf-desc-toolbar-btn" title="Negrito" aria-label="Negrito"><strong>B</strong></button>
+              <button type="button" class="cf-desc-toolbar-btn" title="Itálico" aria-label="Itálico"><em>I</em></button>
+              <button type="button" class="cf-desc-toolbar-btn" title="Sublinhado" aria-label="Sublinhado" style="text-decoration:underline">U</button>
+              <span class="cf-desc-toolbar-sep" aria-hidden="true"></span>
+              <button type="button" class="cf-desc-toolbar-btn" title="Lista" aria-label="Lista">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+                  <circle cx="3" cy="6" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="3" cy="18" r="1" fill="currentColor"/>
+                </svg>
+              </button>
+              <button type="button" class="cf-desc-toolbar-btn" title="Lista numerada" aria-label="Lista numerada">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/>
+                  <path d="M4 6h1v4M4 10h2M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/>
+                </svg>
+              </button>
+              <span class="cf-desc-toolbar-sep" aria-hidden="true"></span>
+              <button type="button" class="cf-desc-toolbar-btn" title="Código" aria-label="Código">&lt;/&gt;</button>
+            </div>
+            <textarea
+              id="id_descricao" name="descricao" class="cf-form-textarea"
+              maxlength="2000" required
+              placeholder="Descreva o que aconteceu, quando começou, e quais passos você já tentou. Se houver mensagem de erro, copie aqui."
+            ></textarea>
+            <div class="cf-desc-footer">
+              <span><strong id="char-count">0</strong> / 2000 caracteres</span>
+              <span>Markdown suportado</span>
+            </div>
+          </div>
+        </div>
+
+        {# Anexos #}
+        <div class="cf-form-group">
+          <span class="cf-form-label">Anexos <span class="cf-opt">opcional</span></span>
+          <label
+            class="cf-dropzone-label" id="dropzone-label"
+            for="id_anexos"
+            title="Clique ou arraste arquivos aqui"
+          >
+            <div class="cf-dropzone-icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+            </div>
+            <div class="cf-dropzone-title">
+              Arraste arquivos aqui ou <a>clique para selecionar</a>
+            </div>
+            <div class="cf-dropzone-sub">PNG, JPG, PDF, TXT — até 10 MB por arquivo</div>
+            <input
+              type="file" id="id_anexos" name="anexos" multiple
+              accept=".pdf,.jpg,.jpeg,.png,.txt"
+              style="display:none"
+              aria-label="Selecionar arquivos para anexar"
+            >
+          </label>
+          <div class="cf-attachment-list" id="attachment-list"></div>
+        </div>
+
+      </div>{# /card-body #}
+
+      {# Form footer (dentro do card 3) #}
+      <div class="cf-form-footer">
+        <div class="cf-footer-info">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+          </svg>
+          Ao abrir, você receberá um e-mail com o número do chamado.
+        </div>
+        <div class="cf-footer-actions">
+          <a href="{% url 'core:meus_chamados' %}" class="cf-btn-cancel">Cancelar</a>
+          <button type="submit" class="cf-btn-submit">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Abrir Chamado
+          </button>
+        </div>
+      </div>
+
+    </div>{# /card 3 #}
+
+  </div>{# /col-main #}
+
+  {# ── Col side ── #}
+  <div class="cf-col-side">
+
+    {# Pré-visualização #}
+    <div class="card ch-card">
+      <div class="ch-card-header">
+        <span class="ch-card-title">Pré-visualização</span>
+      </div>
+      <div class="cf-card-body">
+        <div class="cf-preview-id">CHAMADO #NOVO</div>
+        <div class="cf-preview-title empty" id="preview-title">Assunto do chamado…</div>
+        <div class="cf-preview-badges">
+          <span class="ch-badge ch-badge-blue">Aberto</span>
+          <span class="ch-badge ch-badge-green" id="preview-prioridade">Baixa</span>
+          <span class="ch-badge ch-badge-gray" id="preview-departamento">Departamento</span>
+          <span class="ch-badge ch-badge-gray" id="preview-topico">Tópico</span>
+        </div>
+        <hr class="cf-preview-divider">
+        <div class="cf-preview-meta">
+          <div class="cf-preview-row">
+            <span class="cf-preview-label">Solicitante</span>
+            <span class="cf-preview-value" id="preview-solicitante">{{ user_nome }}</span>
+          </div>
+          <div class="cf-preview-row">
+            <span class="cf-preview-label">Origem</span>
+            <span class="cf-preview-value" id="preview-origem">Portal</span>
+          </div>
+          <div class="cf-preview-row">
+            <span class="cf-preview-label">Ativo</span>
+            <span class="cf-preview-value muted" id="preview-ativo">Nenhum</span>
+          </div>
+          <div class="cf-preview-row">
+            <span class="cf-preview-label">SLA estimado</span>
+            <span class="cf-preview-value" id="preview-sla">72h</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# SLA por prioridade #}
+    <div class="card ch-card">
+      <div class="ch-card-header">
+        <span class="ch-card-title">SLA por prioridade</span>
+      </div>
+      <div class="cf-card-body">
+        <div class="cf-sla-list">
+          <div class="cf-sla-row">
+            <div class="cf-sla-row-left">
+              <span class="priority-dot" style="background:var(--green)"></span>
+              <span class="cf-sla-name">Baixa</span>
+            </div>
+            <span class="cf-sla-hours">72 horas</span>
+          </div>
+          <div class="cf-sla-row">
+            <div class="cf-sla-row-left">
+              <span class="priority-dot" style="background:var(--yellow)"></span>
+              <span class="cf-sla-name">Média</span>
+            </div>
+            <span class="cf-sla-hours">24 horas</span>
+          </div>
+          <div class="cf-sla-row">
+            <div class="cf-sla-row-left">
+              <span class="priority-dot" style="background:var(--orange)"></span>
+              <span class="cf-sla-name">Alta</span>
+            </div>
+            <span class="cf-sla-hours">8 horas</span>
+          </div>
+          <div class="cf-sla-row">
+            <div class="cf-sla-row-left">
+              <span class="priority-dot" style="background:var(--red)"></span>
+              <span class="cf-sla-name">Crítica</span>
+            </div>
+            <span class="cf-sla-hours">2 horas</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# Dicas #}
+    <div class="card ch-card">
+      <div class="ch-card-header">
+        <span class="ch-card-title">Como abrir um bom chamado</span>
+      </div>
+      <div class="cf-card-body">
+
+        <div class="cf-tip">
+          <div class="cf-tip-icon" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="7"/><path d="m21 21-3.8-3.8"/>
+            </svg>
+          </div>
+          <p class="cf-tip-text"><strong>Seja específico no assunto.</strong> "Outlook não envia" é melhor que "problema no e-mail".</p>
+        </div>
+
+        <div class="cf-tip">
+          <div class="cf-tip-icon" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+            </svg>
+          </div>
+          <p class="cf-tip-text"><strong>Conte quando começou</strong> e o que mudou: atualização, novo programa, mudança de mesa.</p>
+        </div>
+
+        <div class="cf-tip">
+          <div class="cf-tip-icon" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+            </svg>
+          </div>
+          <p class="cf-tip-text"><strong>Anexe prints e logs</strong> sempre que possível. Imagem da tela de erro acelera muito a análise.</p>
+        </div>
+
+        <div class="cf-tip">
+          <div class="cf-tip-icon" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="12" rx="2"/><path d="M7 20h10"/>
+            </svg>
+          </div>
+          <p class="cf-tip-text"><strong>Informe o patrimônio</strong> do equipamento envolvido — está na etiqueta colada no aparelho.</p>
+        </div>
+
+      </div>
+    </div>
+
+  </div>{# /col-side #}
+
+</div>{# /cf-page #}
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  /* ── Config ── */
+  const TOPICOS_POR_DEPT = {{ topicos_json|safe }};
+  const IS_ADMIN = {{ is_admin|yesno:"true,false" }};
+  const USER_NOME_DEFAULT = "{{ user_nome|escapejs }}";
+  const BUSCAR_URL = "{% url 'core:colaborador_buscar' %}";
+
+  const ORIGEM_LABELS = {
+    portal: 'Portal', email: 'E-mail', telefone: 'Telefone', presencial: 'Presencial'
+  };
+  const PRIO_MAP = {
+    baixa:   { label: 'Baixa',   cls: 'ch-badge-green',  sla: '72h' },
+    media:   { label: 'Média',   cls: 'ch-badge-yellow', sla: '24h' },
+    alta:    { label: 'Alta',    cls: 'ch-badge-orange', sla: '8h'  },
+    critica: { label: 'Crítica', cls: 'ch-badge-red',    sla: '2h'  },
+  };
+
+  /* ── Refs: form ── */
+  const form        = document.getElementById('chamado-form');
+  const assuntoEl   = document.getElementById('id_assunto');
+  const deptEl      = document.getElementById('id_departamento');
+  const topicoEl    = document.getElementById('id_topico');
+  const classifErr  = document.getElementById('classif-error');
+  const ativoHidden = document.getElementById('id_ativo');
+  const ativoSearch = document.getElementById('id_ativo_search');
+  const ativoWrap   = document.getElementById('ativo-wrap');
+  const ativoClear  = document.getElementById('ativo-clear');
+  const descricaoEl = document.getElementById('id_descricao');
+  const charCount   = document.getElementById('char-count');
+  const fileInput   = document.getElementById('id_anexos');
+  const attachList  = document.getElementById('attachment-list');
+  const dropzone    = document.getElementById('dropzone-label');
+
+  /* ── Refs: preview ── */
+  const previewTitle      = document.getElementById('preview-title');
+  const previewPrio       = document.getElementById('preview-prioridade');
+  const previewDept       = document.getElementById('preview-departamento');
+  const previewTopico     = document.getElementById('preview-topico');
+  const previewOrigem     = document.getElementById('preview-origem');
+  const previewAtivo      = document.getElementById('preview-ativo');
+  const previewSla        = document.getElementById('preview-sla');
+  const previewSolicitante = document.getElementById('preview-solicitante');
+
+  /* ── Refs: solicitante (admin only) ── */
+  const solicitanteHidden = IS_ADMIN ? document.getElementById('id_solicitante')    : null;
+  const userSearch        = IS_ADMIN ? document.getElementById('id_user_search')     : null;
+  const userSearchWrap    = IS_ADMIN ? document.getElementById('user-search-wrap')   : null;
+  const userClear         = IS_ADMIN ? document.getElementById('user-clear')         : null;
+  const userDropdown      = IS_ADMIN ? document.getElementById('user-dropdown')      : null;
+  const userChip          = IS_ADMIN ? document.getElementById('user-chip')          : null;
+  const userChipAvatar    = IS_ADMIN ? document.getElementById('user-chip-avatar')   : null;
+  const userChipName      = IS_ADMIN ? document.getElementById('user-chip-name')     : null;
+  const userChipEmail     = IS_ADMIN ? document.getElementById('user-chip-email')    : null;
+  const userChipClear     = IS_ADMIN ? document.getElementById('user-chip-clear')    : null;
+  const userError         = IS_ADMIN ? document.getElementById('user-error')         : null;
+  const userInfo          = IS_ADMIN ? document.getElementById('user-info')          : null;
+  const userInfoFuncao    = IS_ADMIN ? document.getElementById('user-info-funcao')   : null;
+  const userInfoSetor     = IS_ADMIN ? document.getElementById('user-info-setor')    : null;
+  const userInfoRamal     = IS_ADMIN ? document.getElementById('user-info-ramal')    : null;
+  const userInfoAtivos    = IS_ADMIN ? document.getElementById('user-info-ativos')   : null;
+
+  /* ── Solicitante state ── */
+  let currentColaborador = null;  /* { user_id, nome, email, ativos: [] } */
+
+  /* ── Live preview ── */
+  function updatePreview() {
+    /* Assunto */
+    const assunto = assuntoEl.value.trim();
+    previewTitle.textContent = assunto || 'Assunto do chamado…';
+    previewTitle.classList.toggle('empty', !assunto);
+
+    /* Origem */
+    const origemChecked = document.querySelector('input[name="origem"]:checked');
+    previewOrigem.textContent = origemChecked
+      ? (ORIGEM_LABELS[origemChecked.value] || origemChecked.value) : 'Portal';
+
+    /* Prioridade */
+    const prioChecked = document.querySelector('input[name="prioridade"]:checked');
+    const prioKey  = prioChecked ? prioChecked.value : 'baixa';
+    const prioData = PRIO_MAP[prioKey] || PRIO_MAP.baixa;
+    previewPrio.textContent = prioData.label;
+    previewPrio.className = 'ch-badge ' + prioData.cls;
+    previewSla.textContent = prioData.sla;
+
+    /* Departamento */
+    const deptOpt = deptEl.options[deptEl.selectedIndex];
+    previewDept.textContent = (deptEl.value && deptOpt)
+      ? deptOpt.textContent.trim() : 'Departamento';
+
+    /* Tópico */
+    const topOpt = topicoEl.options[topicoEl.selectedIndex];
+    previewTopico.textContent = (topicoEl.value && topOpt)
+      ? topOpt.textContent.trim() : 'Tópico';
+
+    /* Ativo */
+    const ativoVal = ativoSearch.value.trim();
+    previewAtivo.textContent = ativoVal || 'Nenhum';
+    previewAtivo.classList.toggle('muted', !ativoVal);
+
+    /* Solicitante */
+    if (previewSolicitante) {
+      previewSolicitante.textContent = currentColaborador
+        ? currentColaborador.nome : USER_NOME_DEFAULT;
+    }
+  }
+
+  /* ── Tópicos dinâmicos ── */
+  deptEl.addEventListener('change', function () {
+    const topicos = TOPICOS_POR_DEPT[this.value] || [];
+    if (topicos.length) {
+      topicoEl.innerHTML = '<option value="">— Selecione o Tópico —</option>';
+      topicos.forEach(function (t) {
+        const o = document.createElement('option');
+        o.value = t.id;
+        o.textContent = t.nome;
+        topicoEl.appendChild(o);
+      });
+      topicoEl.disabled = false;
+    } else {
+      topicoEl.innerHTML = '<option value="">— Selecione um departamento primeiro —</option>';
+      topicoEl.disabled = true;
+    }
+    classifErr.classList.remove('visible');
+    updatePreview();
+  });
+
+  topicoEl.addEventListener('change', function () {
+    if (deptEl.value && this.value) classifErr.classList.remove('visible');
+    updatePreview();
+  });
+
+  /* ── Admin: autocomplete de colaborador ── */
+  if (IS_ADMIN) {
+    let _debounceTimer = null;
+    let _userAtivos = [];
+
+    function initials(nome) {
+      const parts = (nome || '').trim().split(/\s+/);
+      if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      return (parts[0] || '?')[0].toUpperCase();
+    }
+
+    function showDropdown(results) {
+      userDropdown.innerHTML = '';
+      if (!results.length) {
+        userDropdown.innerHTML = '<div class="cf-user-result cf-user-result-empty">Nenhum colaborador encontrado.</div>';
+      } else {
+        results.forEach(function (r) {
+          const el = document.createElement('div');
+          el.className = 'cf-user-result';
+          el.setAttribute('role', 'option');
+          el.setAttribute('tabindex', '0');
+          el.innerHTML =
+            '<span class="cf-user-avatar" aria-hidden="true">' + initials(r.nome) + '</span>' +
+            '<div style="flex:1;min-width:0">' +
+              '<div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + r.nome + '</div>' +
+              '<div style="font-size:.75rem;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' +
+                (r.setor ? r.setor + ' · ' : '') + r.email +
+              '</div>' +
+            '</div>';
+          el.addEventListener('click', function () { selectColaborador(r); });
+          el.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectColaborador(r); }
+          });
+          userDropdown.appendChild(el);
+        });
+      }
+      userDropdown.classList.add('open');
+      userSearch.setAttribute('aria-expanded', 'true');
+    }
+
+    function hideDropdown() {
+      userDropdown.classList.remove('open');
+      userDropdown.innerHTML = '';
+      userSearch.setAttribute('aria-expanded', 'false');
+    }
+
+    function selectColaborador(r) {
+      currentColaborador = r;
+      _userAtivos = r.ativos || [];
+
+      solicitanteHidden.value = r.user_id;
+
+      /* Chip */
+      userChipAvatar.textContent = initials(r.nome);
+      userChipName.textContent   = r.nome;
+      userChipEmail.textContent  = r.email;
+      userChip.style.display     = 'flex';
+      userSearchWrap.style.display = 'none';
+      hideDropdown();
+
+      /* Info sub-card */
+      userInfoFuncao.textContent = r.funcao  || '—';
+      userInfoSetor.textContent  = r.setor   || '—';
+      userInfoRamal.textContent  = r.ramal   || '—';
+      userInfoAtivos.textContent = _userAtivos.length
+        ? _userAtivos.map(function (a) { return a.patrimonio; }).join(', ')
+        : '—';
+      userInfo.style.display = 'grid';
+
+      /* Preencher sugestões de ativo com os ativos do colaborador */
+      const suggestEl = document.getElementById('asset-suggestions');
+      if (suggestEl && _userAtivos.length) {
+        suggestEl.innerHTML = '';
+        _userAtivos.forEach(function (a) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'asset-suggest-chip';
+          btn.dataset.value = a.patrimonio;
+          btn.dataset.id    = a.id;
+          btn.title = a.patrimonio + (a.modelo ? ' — ' + a.modelo : '');
+          btn.innerHTML =
+            '<span class="asset-suggest-tag">' + (a.categoria || '').toUpperCase().slice(0, 8) + '</span>' +
+            a.patrimonio;
+          btn.addEventListener('click', function () {
+            ativoSearch.value   = a.patrimonio;
+            ativoHidden.value   = a.id;
+            ativoWrap.classList.add('has-value');
+            updatePreview();
+          });
+          suggestEl.appendChild(btn);
+        });
+      }
+
+      if (userError) userError.classList.remove('visible');
+      updatePreview();
+    }
+
+    function clearColaborador() {
+      currentColaborador = null;
+      _userAtivos = [];
+      solicitanteHidden.value = '';
+      userSearch.value = '';
+      userChip.style.display       = 'none';
+      userSearchWrap.style.display = '';
+      userInfo.style.display       = 'none';
+      userSearchWrap.classList.remove('has-value');
+      hideDropdown();
+      updatePreview();
+    }
+
+    userSearch.addEventListener('input', function () {
+      const q = this.value.trim();
+      userSearchWrap.classList.toggle('has-value', q.length > 0);
+      clearTimeout(_debounceTimer);
+      if (q.length < 2) { hideDropdown(); return; }
+      _debounceTimer = setTimeout(function () {
+        fetch(BUSCAR_URL + '?q=' + encodeURIComponent(q), {
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) { showDropdown(data.results || []); })
+          .catch(function () { hideDropdown(); });
+      }, 250);
+    });
+
+    userClear.addEventListener('click', function () {
+      userSearch.value = '';
+      userSearchWrap.classList.remove('has-value');
+      hideDropdown();
+    });
+
+    userChipClear.addEventListener('click', clearColaborador);
+
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('#user-search-wrap') && !e.target.closest('#user-dropdown')) {
+        hideDropdown();
+      }
+    });
+  }
+
+  /* ── Validação client-side ── */
+  form.addEventListener('submit', function (e) {
+    let blocked = false;
+
+    if (!deptEl.value || !topicoEl.value) {
+      classifErr.classList.add('visible');
+      classifErr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      (deptEl.value ? topicoEl : deptEl).focus();
+      blocked = true;
+    }
+
+    if (IS_ADMIN && !solicitanteHidden.value) {
+      userError.classList.add('visible');
+      if (!blocked) {
+        userError.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        userSearch && userSearch.focus();
+      }
+      blocked = true;
+    }
+
+    if (blocked) e.preventDefault();
+  });
+
+  /* ── Char counter ── */
+  descricaoEl.addEventListener('input', function () {
+    charCount.textContent = this.value.length;
+  });
+
+  /* ── Ativo search ── */
+  ativoSearch.addEventListener('input', function () {
+    const has = this.value.trim().length > 0;
+    ativoWrap.classList.toggle('has-value', has);
+    if (!has) ativoHidden.value = '';
+    updatePreview();
+  });
+
+  ativoClear.addEventListener('click', function () {
+    ativoHidden.value = '';
+    ativoSearch.value = '';
+    ativoWrap.classList.remove('has-value');
+    updatePreview();
+  });
+
+  document.querySelectorAll('.asset-suggest-chip').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      const val = this.dataset.value || '';
+      ativoSearch.value = val;
+      ativoHidden.value = this.dataset.id || '';
+      ativoWrap.classList.toggle('has-value', val.length > 0);
+      updatePreview();
+    });
+  });
+
+  /* ── Radios ── */
+  document.querySelectorAll('input[name="origem"], input[name="prioridade"]').forEach(function (r) {
+    r.addEventListener('change', updatePreview);
+  });
+
+  assuntoEl.addEventListener('input', updatePreview);
+
+  /* ── File attachments ── */
+  function extClass(name) { return 'ext-' + (name.split('.').pop() || '').toLowerCase(); }
+  function fmtSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+  function addAttachment(file) {
+    const ext  = (file.name.split('.').pop() || '').toUpperCase().slice(0, 4);
+    const item = document.createElement('div');
+    item.className = 'cf-attachment-item';
+    item.innerHTML =
+      '<div class="cf-attachment-icon ' + extClass(file.name) + '">' + ext + '</div>' +
+      '<span class="cf-attachment-name">' + file.name + '</span>' +
+      '<span class="cf-attachment-size">' + fmtSize(file.size) + '</span>' +
+      '<button type="button" class="cf-attachment-remove" title="Remover anexo" aria-label="Remover ' + file.name + '">&times;</button>';
+    item.querySelector('.cf-attachment-remove').addEventListener('click', function (e) {
+      e.preventDefault(); item.remove();
+    });
+    attachList.appendChild(item);
+  }
+
+  fileInput.addEventListener('change', function () {
+    Array.from(this.files).forEach(addAttachment);
+  });
+
+  dropzone.addEventListener('dragover',  function (e) { e.preventDefault(); this.classList.add('drag-over'); });
+  dropzone.addEventListener('dragleave', function ()  { this.classList.remove('drag-over'); });
+  dropzone.addEventListener('drop',      function (e) {
+    e.preventDefault(); this.classList.remove('drag-over');
+    Array.from(e.dataTransfer.files).forEach(addAttachment);
+  });
+
+  /* ── Init ── */
+  updatePreview();
+})();
+</script>
+{% endblock %}

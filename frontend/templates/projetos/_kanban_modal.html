@@ -1,0 +1,270 @@
+<div id="modalOverlay" class="modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+
+    <!-- Capa colorida -->
+    <div id="modalCover" style="height:0;transition:height .2s;flex-shrink:0"></div>
+
+    <!-- Barra superior -->
+    <div class="modal-bar">
+      <div class="modal-bar-left">
+        <button class="modal-status-btn" onclick="kbTogglePopover('popMover', this)">
+          <span class="modal-status-dot" id="statusDot"></span>
+          <span id="statusLabel">Em andamento</span>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+
+        <!-- Popover: Mover (barra) -->
+        <div id="popMover" class="popover" style="min-width:260px">
+          <div class="popover-header">
+            <span class="popover-title">Mover cartão</span>
+            <button class="popover-close" onclick="closePopover('popMover')">×</button>
+          </div>
+          <div class="popover-body">
+            <div class="pop-section-label" style="margin-bottom:6px">Lista</div>
+            <select id="moveListSelect" class="pop-select">
+              {% for lista in listas %}
+              <option value="{{ lista.pk }}" data-lista-id="{{ lista.pk }}" data-cor="{{ lista.cor }}">{{ lista.nome }}</option>
+              {% endfor %}
+            </select>
+            <button class="pop-btn-full" onclick="moveCard()">Mover</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-bar-right">
+        <button class="modal-close-btn" onclick="closeModal()">×</button>
+      </div>
+    </div>
+
+    <!-- Título -->
+    <div class="modal-title-row">
+      <div class="modal-title-circle" id="titleCircle" onclick="toggleDone()"></div>
+      <textarea class="modal-title-input" id="modalTitleInput" rows="1"
+                placeholder="Título do card" oninput="autoResize(this)"></textarea>
+    </div>
+
+    <!-- Chips de etiqueta -->
+    <div class="modal-labels-row" id="labelsRow"></div>
+
+    <!-- Toolbar -->
+    <div class="modal-toolbar" id="modalToolbar">
+      <button class="tb-btn" onclick="kbTogglePopover('popMoverTb', this)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        Mover cartão
+      </button>
+      <button class="tb-btn" id="btnEtiquetas" onclick="kbTogglePopover('popEtiquetas', this)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        Etiquetas
+      </button>
+      <button class="tb-btn" onclick="kbTogglePopover('popDatas', this)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        Datas
+      </button>
+      <button class="tb-btn" onclick="kbTogglePopover('popChecklist', this)">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 4.5l1 1 2-2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 4h6M8 8h4M8 12h6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><rect x="1" y="9" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.4"/></svg>
+        Checklist
+      </button>
+      <button class="tb-btn" onclick="kbTogglePopover('popMembros', this)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.87"/></svg>
+        Membros
+      </button>
+      <button class="tb-btn" onclick="kbTogglePopover('popCapa', this)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        Capa
+      </button>
+
+      <!-- Popover: Mover (toolbar) -->
+      <div id="popMoverTb" class="popover" style="min-width:260px">
+        <div class="popover-header">
+          <span class="popover-title">Mover cartão</span>
+          <button class="popover-close" onclick="closePopover('popMoverTb')">×</button>
+        </div>
+        <div class="popover-body">
+          <div class="pop-section-label" style="margin-bottom:6px">Lista</div>
+          <select id="moveListSelectTb" class="pop-select">
+            {% for lista in listas %}
+            <option value="{{ lista.pk }}" data-lista-id="{{ lista.pk }}" data-cor="{{ lista.cor }}">{{ lista.nome }}</option>
+            {% endfor %}
+          </select>
+          <button class="pop-btn-full"
+            onclick="document.getElementById('moveListSelect').value=document.getElementById('moveListSelectTb').value;moveCard();closePopover('popMoverTb')">
+            Mover
+          </button>
+        </div>
+      </div>
+
+      <!-- Popover: Etiquetas -->
+      <div id="popEtiquetas" class="popover">
+        <div class="popover-header">
+          <span class="popover-title">Etiquetas</span>
+          <button class="popover-close" onclick="closePopover('popEtiquetas')">×</button>
+        </div>
+        <div class="popover-body">
+          <input class="pop-input" placeholder="Buscar etiquetas..." oninput="filterLabels(this.value)">
+          <div class="pop-section-label">Etiquetas</div>
+          <div class="label-list" id="labelList">
+            {% for etq in etiquetas %}
+            <div class="label-row" data-label="{{ etq.nome }}">
+              <input type="checkbox" data-etq-id="{{ etq.pk }}"
+                     onchange="toggleLabel(this, {{ etq.pk }}, '{{ etq.cor }}', '{{ etq.nome|escapejs }}')">
+              <div class="label-color-bar" style="background:{{ etq.cor }}">{{ etq.nome }}</div>
+            </div>
+            {% empty %}
+            <p style="font-size:12px;color:#9ca3af;padding:4px 0">Nenhuma etiqueta neste quadro.</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Popover: Datas -->
+      <div id="popDatas" class="popover pop-dates">
+        <div class="popover-header">
+          <span class="popover-title">Datas</span>
+          <button class="popover-close" onclick="closePopover('popDatas')">×</button>
+        </div>
+        <div class="popover-body">
+          <div class="cal-nav">
+            <button class="cal-nav-btn" onclick="changeMonth(-1)">‹</button>
+            <span class="cal-month" id="calMonthLabel"></span>
+            <button class="cal-nav-btn" onclick="changeMonth(1)">›</button>
+          </div>
+          <table class="cal-grid" id="calGrid"></table>
+          <div class="date-field-row">
+            <div class="date-field-label">Data de início</div>
+            <input type="date" id="dateStart" class="date-input" style="width:100%;margin-bottom:8px">
+            <div class="date-field-label">Data de entrega</div>
+            <input type="date" id="dateEnd" class="date-input" style="width:100%">
+          </div>
+          <button class="pop-btn-full" onclick="saveDates()" style="margin-top:10px">Salvar</button>
+          <button class="pop-btn-ghost" onclick="closePopover('popDatas')">Cancelar</button>
+        </div>
+      </div>
+
+      <!-- Popover: Checklist -->
+      <div id="popChecklist" class="popover pop-checklist">
+        <div class="popover-header">
+          <span class="popover-title">Adicionar Checklist</span>
+          <button class="popover-close" onclick="closePopover('popChecklist')">×</button>
+        </div>
+        <div class="popover-body">
+          <div class="pop-section-label">Título</div>
+          <input class="pop-input" id="checklistTitleInput" value="Checklist"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();addChecklistSection()}">
+          <button class="pop-btn-full" onclick="addChecklistSection()">Adicionar</button>
+        </div>
+      </div>
+
+      <!-- Popover: Membros -->
+      <div id="popMembros" class="popover">
+        <div class="popover-header">
+          <span class="popover-title">Membros</span>
+          <button class="popover-close" onclick="closePopover('popMembros')">×</button>
+        </div>
+        <div class="popover-body">
+          <input class="pop-input" placeholder="Pesquisar membros..." oninput="filterMembers(this.value)">
+          <div class="pop-section-label">Membros do Quadro</div>
+          <div class="member-list" id="memberList">
+            {% for u in usuarios %}
+            <div class="member-row" data-uid="{{ u.pk }}" onclick="toggleMember(this, {{ u.pk }}, '{{ u.get_full_name|default:u.username|escapejs }}')">
+              <div style="width:26px;height:26px;border-radius:50%;background:#2563eb;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0">{{ u.username|first|upper }}</div>
+              <span class="member-row-name">{{ u.get_full_name|default:u.username }}</span>
+              <svg class="member-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+            </div>
+            {% empty %}
+            <p style="font-size:12px;color:#9ca3af">Nenhum membro disponível.</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Popover: Capa -->
+      <div id="popCapa" class="popover">
+        <div class="popover-header">
+          <span class="popover-title">Capa</span>
+          <button class="popover-close" onclick="closePopover('popCapa')">×</button>
+        </div>
+        <div class="popover-body">
+          <div class="pop-section-label">Cores</div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px">
+            {% for cor in "#ef4444,#f97316,#eab308,#22c55e,#2563eb,#7c3aed,#ec4899,#0d9488,#64748b,#1f2937" %}
+            {% if forloop.first %}{% endif %}
+            {% endfor %}
+            <!-- Cores hardcoded para evitar filtro split -->
+            <div onclick="setCover('#ef4444')" style="height:28px;border-radius:6px;background:#ef4444;cursor:pointer" title="Vermelho"></div>
+            <div onclick="setCover('#f97316')" style="height:28px;border-radius:6px;background:#f97316;cursor:pointer" title="Laranja"></div>
+            <div onclick="setCover('#eab308')" style="height:28px;border-radius:6px;background:#eab308;cursor:pointer" title="Amarelo"></div>
+            <div onclick="setCover('#22c55e')" style="height:28px;border-radius:6px;background:#22c55e;cursor:pointer" title="Verde"></div>
+            <div onclick="setCover('#2563eb')" style="height:28px;border-radius:6px;background:#2563eb;cursor:pointer" title="Azul"></div>
+            <div onclick="setCover('#7c3aed')" style="height:28px;border-radius:6px;background:#7c3aed;cursor:pointer" title="Roxo"></div>
+            <div onclick="setCover('#ec4899')" style="height:28px;border-radius:6px;background:#ec4899;cursor:pointer" title="Rosa"></div>
+            <div onclick="setCover('#0d9488')" style="height:28px;border-radius:6px;background:#0d9488;cursor:pointer" title="Teal"></div>
+            <div onclick="setCover('#64748b')" style="height:28px;border-radius:6px;background:#64748b;cursor:pointer" title="Cinza"></div>
+            <div onclick="setCover('#1f2937')" style="height:28px;border-radius:6px;background:#1f2937;cursor:pointer" title="Escuro"></div>
+          </div>
+          <button class="pop-btn-ghost" onclick="setCover(null)">Remover capa</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Corpo: descrição + comentários -->
+    <div class="modal-body">
+      <div class="modal-main">
+        <div class="section-head">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Descrição
+        </div>
+        <textarea class="editor-area" id="descArea"
+                  placeholder="Adicione uma descrição mais detalhada..."></textarea>
+
+        <div class="modal-meta-row">
+          <div class="modal-meta-field">
+            <label class="modal-meta-label">Área</label>
+            <input class="modal-meta-input" id="areaInput" type="text" placeholder="Ex: TI, Financeiro...">
+          </div>
+          <div class="modal-meta-field">
+            <label class="modal-meta-label">Progresso</label>
+            <div class="modal-progress-wrap">
+              <input class="modal-meta-input" id="progressoInput" type="number" min="0" max="100" step="5" placeholder="0">
+              <span class="modal-progress-pct">%</span>
+              <div class="modal-progress-bar-bg">
+                <div class="modal-progress-bar-fill" id="progressoFill"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="checklistContainer"></div>
+      </div>
+
+      <div class="modal-comments">
+        <div class="comments-header">
+          <div class="comments-header-left">Comentários e atividade</div>
+        </div>
+        <div class="comment-input-wrap">
+          <textarea id="commentInput" class="comment-input"
+                    placeholder="Escrever um comentário..."></textarea>
+          <div id="commentSubmitRow" class="comment-submit-row" style="display:none">
+            <button class="comment-submit" onclick="submitComment()">Salvar</button>
+          </div>
+        </div>
+        <div class="activity-feed" id="activityFeed"></div>
+      </div>
+    </div>
+
+    <!-- Barra de salvar -->
+    <div class="modal-save-bar">
+      <div class="modal-save-bar-left">
+        <button class="btn-delete-card" type="button" onclick="excluirCartao()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/></svg>
+          Excluir cartão
+        </button>
+        <a class="btn-fmt" href="#" onclick="return false">Ajuda para formatação</a>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+        <button class="btn-save" onclick="closeModal()">Fechar</button>
+      </div>
+    </div>
+
+  </div><!-- .modal -->
+</div><!-- #modalOverlay -->

@@ -1,0 +1,16 @@
+@import url("partials/00-tokens.css?v=3");
+@import url("partials/01-reset.css?v=3");
+@import url("partials/10-auth.css?v=3");
+@import url("partials/20-layout.css?v=3");
+@import url("partials/30-components.css?v=3");
+@import url("partials/35-funcionarios.css?v=3");
+@import url("partials/36-locais.css?v=3");
+@import url("partials/37-ativos.css?v=3");
+@import url("partials/38-estoque.css?v=3");
+@import url("partials/40-indicadores.css?v=3");
+@import url("partials/45-chamado-detail.css?v=3");
+@import url("partials/46-chamado-list.css?v=3");
+@import url("partials/47-chamado-form.css?v=3");
+@import url("partials/50-kanban.css?v=3");
+@import url("partials/60-chat.css?v=3");
+@import url("partials/90-utilities.css?v=3");

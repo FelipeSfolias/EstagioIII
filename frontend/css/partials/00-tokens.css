@@ -1,0 +1,23 @@
+:root{
+  --bg:#f3f4f6;
+  --surface:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:#e5e7eb;
+  --accent:#a3e635;
+  --accent-ink:#3f6212;
+  --sidebar:#0d1117;
+  --sidebar-ink:#cbd5e1;
+  --sidebar-active-bg:rgba(163,230,53,.13);
+  --sidebar-active-border:#a3e635;
+  --sidebar-active-ink:#d9f99d;
+  --sidebar-hover:#ffffff0d;
+
+  /* Semantic colour tokens */
+  --blue:#2563eb;       --blue-light:#eff6ff;
+  --green:#16a34a;      --green-light:#f0fdf4;
+  --red:#dc2626;        --red-light:#fef2f2;
+  --orange:#ea580c;     --orange-light:#fff7ed;
+  --yellow:#ca8a04;     --yellow-light:#fefce8;
+  --purple:#7c3aed;     --purple-light:#f5f3ff;
+}

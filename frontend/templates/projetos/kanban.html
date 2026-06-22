@@ -1,0 +1,1424 @@
+﻿{% extends "base.html" %}
+{% block title %}Kanban{% endblock %}
+{% block topbar %}{% endblock %}
+
+{% block content %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Fonte Inter — escopada à tela Kanban (não altera o chrome/sidebar global) */
+  .kb-header, .kb-wrap, #modalOverlay, .kb-form-modal, #kb-prompt-backdrop{
+    font-family:'Inter', system-ui, -apple-system, Segoe UI, sans-serif;
+  }
+  :root {
+    /* Board variables */
+    --kb-bg:#f0f2f5;--kb-surface:#fff;--kb-border:#e2e5ea;
+    --kb-text:#111827;--kb-muted:#9ca3af;--kb-secondary:#6b7280;
+    --kb-blue:#2563eb;--kb-blue-light:#eff6ff;
+    --kb-green:#16a34a;--kb-red:#dc2626;--kb-orange:#ea580c;
+    --kb-radius:12px;
+    --kb-shadow-sm:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+    --kb-shadow:0 4px 12px rgba(0,0,0,.08),0 1px 3px rgba(0,0,0,.05);
+    --kb-shadow-lg:0 8px 28px rgba(0,0,0,.14),0 2px 6px rgba(0,0,0,.06);
+    --kb-shadow-pop:0 8px 24px rgba(0,0,0,.14),0 2px 8px rgba(0,0,0,.08);
+    /* Modal CSS variables (não conflitam com styles.css) */
+    --border:#e2e5ea;
+    --text-primary:#111827;--text-secondary:#6b7280;--text-muted:#9ca3af;
+    --blue:#2563eb;--blue-light:#eff6ff;
+    --green:#16a34a;--red:#dc2626;
+    --shadow-pop:0 8px 24px rgba(0,0,0,.14),0 2px 8px rgba(0,0,0,.08);
+  }
+  .kb-header{display:flex;align-items:center;justify-content:space-between;padding:0 0 14px}
+  .kb-title{font-size:18px;font-weight:800;letter-spacing:-.4px}
+  .kb-subtitle{font-size:12px;color:var(--kb-muted);background:var(--kb-bg);border:1px solid var(--kb-border);border-radius:20px;padding:2px 10px;font-weight:500}
+  .kb-btn-ghost{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:7px;border:1px solid var(--kb-border);background:var(--kb-surface);font-size:12px;font-weight:600;color:var(--kb-secondary);cursor:pointer;transition:all .15s;font-family:inherit}
+  .kb-btn-ghost:hover{background:var(--kb-bg);color:var(--kb-text)}
+  /* Board */
+  .kb-wrap{overflow-x:auto;padding:0 0 24px;display:flex;gap:16px;align-items:flex-start;min-height:0}
+  .kb-wrap::-webkit-scrollbar{height:6px}
+  .kb-wrap::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:10px}
+  /* Column */
+  .kb-col{flex-shrink:0;width:280px;display:flex;flex-direction:column;border-radius:var(--kb-radius);background:var(--kb-surface);border:1px solid var(--kb-border);box-shadow:var(--kb-shadow-sm);overflow:hidden;max-height:calc(100vh - 220px)}
+  .kb-col-hd{padding:14px 14px 10px;border-bottom:1px solid var(--kb-border);flex-shrink:0;position:relative}
+  .kb-col-accent{position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0}
+  .kb-col-row{display:flex;align-items:center;justify-content:space-between}
+  .kb-col-left{display:flex;align-items:center;gap:8px}
+  .kb-badge{min-width:22px;height:22px;border-radius:20px;background:var(--kb-bg);border:1px solid var(--kb-border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--kb-secondary);padding:0 6px}
+  .kb-col-name{font-size:13px;font-weight:700;letter-spacing:-.2px}
+  .kb-col-body{overflow-y:auto;flex:1;padding:10px 10px 8px;display:flex;flex-direction:column;gap:10px}
+  .kb-col-body::-webkit-scrollbar{width:4px}
+  .kb-col-body::-webkit-scrollbar-thumb{background:#e5e7eb;border-radius:10px}
+  /* Card */
+  .kb-card{background:var(--kb-surface);border:1px solid var(--kb-border);border-radius:10px;padding:12px;cursor:pointer;transition:box-shadow .22s ease,transform .18s ease,border-color .18s ease;position:relative;overflow:hidden}
+  .kb-card-bar{position:absolute;left:0;top:0;bottom:0;width:3px}
+  .kb-card:hover{box-shadow:var(--kb-shadow);transform:translateY(-1px);border-color:var(--kb-muted)}
+  .kb-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:10px}
+  .kb-card-title{font-size:13px;font-weight:600;line-height:1.4;color:var(--kb-text);flex:1}
+  .kb-card-pct{font-size:11px;font-weight:700;flex-shrink:0;padding:2px 7px;border-radius:20px}
+  .kb-card-pct.done{background:#dcfce7;color:#15803d}
+  .kb-card-pct.mid{background:#dbeafe;color:#1d4ed8}
+  .kb-card-pct.low{background:var(--kb-bg);color:var(--kb-muted)}
+  .kb-progress{height:4px;background:var(--kb-bg);border-radius:10px;overflow:hidden;margin-bottom:10px}
+  .kb-progress-fill{height:100%;border-radius:10px;transition:width .4s ease}
+  .kb-card-meta{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .kb-card-meta-left{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .kb-card-area{font-size:10px;font-weight:600;color:var(--kb-secondary);background:var(--kb-bg);border:1px solid var(--kb-border);border-radius:20px;padding:2px 8px;white-space:nowrap}
+  .kb-label-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+  .kb-card-date{font-size:10px;color:var(--kb-muted);display:flex;align-items:center;gap:3px}
+  /* Card enriquecido: chips de etiqueta, badge de checklist, avatares e atraso */
+  .kb-chips{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+  .kb-chip{font-size:9.5px;font-weight:700;line-height:1.4;padding:2px 8px;border-radius:20px;color:var(--c);background:var(--kb-bg);background:color-mix(in srgb,var(--c) 14%,#fff);border:1px solid var(--kb-border);border-color:color-mix(in srgb,var(--c) 32%,#fff);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .kb-cl-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:var(--kb-secondary);background:var(--kb-bg);border:1px solid var(--kb-border);border-radius:20px;padding:2px 7px;white-space:nowrap}
+  .kb-card-date.atrasado{color:var(--kb-red);font-weight:700;background:color-mix(in srgb,var(--kb-red) 10%,var(--kb-surface));padding:2px 6px;border-radius:20px}
+  .kb-card-avs{display:flex;align-items:center;flex-shrink:0}
+  .kb-card-av{width:22px;height:22px;border-radius:50%;background:var(--kb-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;border:2px solid var(--kb-surface);margin-left:-6px;flex-shrink:0}
+  .kb-card-av:first-child{margin-left:0}
+  .kb-card-av.more{background:var(--kb-secondary)}
+  .kb-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:24px 16px;margin:2px 0;color:var(--kb-muted);font-size:12px;font-weight:500;text-align:center;border:1.5px dashed var(--kb-border);border-radius:10px;background:var(--kb-bg)}
+  .kb-empty svg{opacity:.3}
+  .kb-col-ft{padding:6px 10px 10px;flex-shrink:0}
+  .kb-add-card{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:8px;border:1.5px dashed #d1d5db;border-radius:8px;background:transparent;cursor:pointer;font-size:12px;font-weight:600;color:var(--kb-muted);transition:all .15s;font-family:inherit}
+  .kb-add-card:hover{border-color:var(--kb-blue);color:var(--kb-blue);background:var(--kb-blue-light)}
+  .kb-add-col{flex-shrink:0;width:240px;border:2px dashed #d1d5db;border-radius:var(--kb-radius);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;padding:32px 16px;min-height:120px;align-self:flex-start}
+  .kb-add-col:hover{border-color:var(--kb-blue);background:var(--kb-blue-light)}
+  .kb-add-col-inner{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--kb-muted);font-size:12px;font-weight:600}
+  .kb-add-col:hover .kb-add-col-inner{color:var(--kb-blue)}
+  /* Modal */
+  .kb-overlay{position:fixed;inset:0;background:rgba(15,20,30,.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
+  .kb-overlay.open{opacity:1;pointer-events:all}
+  .kb-modal{background:var(--kb-surface);border-radius:14px;width:900px;max-width:calc(100vw - 32px);height:88vh;max-height:700px;box-shadow:0 32px 80px rgba(0,0,0,.2);display:flex;flex-direction:column;transform:translateY(16px) scale(.97);transition:transform .22s cubic-bezier(.22,1,.36,1);overflow:hidden;position:relative}
+  .kb-overlay.open .kb-modal{transform:translateY(0) scale(1)}
+  .kb-modal-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 8px;border-bottom:1px solid var(--kb-border);flex-shrink:0;gap:10px}
+  .kb-status-btn{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid var(--kb-border);background:var(--kb-bg);font-size:12px;font-weight:600;color:var(--kb-secondary);cursor:pointer;font-family:inherit;transition:all .15s}
+  .kb-status-btn:hover{border-color:#d1d5db;background:#e9ebee}
+  .kb-status-dot{width:8px;height:8px;border-radius:50%;background:var(--kb-blue);flex-shrink:0}
+  .kb-icon-btn{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--kb-muted);transition:all .15s;background:transparent;border:none;font-size:20px}
+  .kb-icon-btn:hover{background:var(--kb-bg);color:var(--kb-text)}
+  .kb-modal-title-row{display:flex;align-items:flex-start;gap:10px;padding:14px 20px 10px;flex-shrink:0}
+  .kb-title-circle{width:20px;height:20px;border-radius:50%;border:2px solid #d1d5db;flex-shrink:0;margin-top:4px;cursor:pointer;transition:border-color .15s}
+  .kb-title-circle:hover{border-color:var(--kb-blue)}
+  .kb-title-circle.done{background:var(--kb-green);border-color:var(--kb-green)}
+  .kb-title-input{flex:1;font-size:20px;font-weight:800;letter-spacing:-.4px;border:none;outline:none;background:transparent;color:var(--kb-text);font-family:inherit;resize:none;line-height:1.3}
+  .kb-labels-row{display:flex;align-items:center;gap:6px;padding:0 20px 10px 50px;flex-wrap:wrap;flex-shrink:0}
+  .kb-label-chip{height:20px;border-radius:4px;padding:0 10px;font-size:11px;font-weight:700;color:#fff;display:flex;align-items:center;cursor:pointer;transition:filter .15s}
+  .kb-label-chip:hover{filter:brightness(1.1)}
+  .kb-toolbar{display:flex;align-items:center;gap:4px;padding:0 20px 10px;flex-shrink:0;position:relative}
+  .kb-tb-btn{display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;border:1px solid var(--kb-border);background:var(--kb-surface);font-size:12px;font-weight:600;color:var(--kb-secondary);cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;position:relative}
+  .kb-tb-btn:hover{background:var(--kb-bg);color:var(--kb-text);border-color:#d1d5db}
+  .kb-popover{position:absolute;top:calc(100% + 6px);left:0;background:var(--kb-surface);border:1px solid var(--kb-border);border-radius:10px;box-shadow:var(--kb-shadow-pop);z-index:500;display:none;min-width:280px}
+  .kb-popover.open{display:block;animation:kbPopIn .14s ease}
+  @keyframes kbPopIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+  .kb-pop-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px;border-bottom:1px solid var(--kb-border)}
+  .kb-pop-title{font-size:12px;font-weight:700}
+  .kb-pop-body{padding:10px 14px 14px}
+  .kb-pop-input{width:100%;border:1px solid var(--kb-border);border-radius:7px;padding:7px 10px;font-size:12.5px;font-family:inherit;outline:none;background:var(--kb-bg);color:var(--kb-text);transition:border-color .15s;margin-bottom:10px}
+  .kb-pop-input:focus{border-color:var(--kb-blue);background:#fff}
+  .kb-modal-body{display:flex;flex:1;overflow:hidden;border-top:1px solid var(--kb-border)}
+  .kb-modal-main{flex:1;overflow-y:auto;padding:16px 20px 20px}
+  .kb-modal-main::-webkit-scrollbar{width:4px}
+  .kb-modal-main::-webkit-scrollbar-thumb{background:#e5e7eb;border-radius:10px}
+  .kb-section-hd{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--kb-secondary);margin-bottom:8px}
+  .kb-editor-area{width:100%;border:1px solid var(--kb-border);border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;color:var(--kb-text);resize:vertical;min-height:90px;outline:none;background:var(--kb-surface);transition:border-color .15s}
+  .kb-editor-area:focus{border-color:var(--kb-blue)}
+  /* Checklists */
+  .kb-cl-section{margin-top:18px}
+  .kb-cl-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .kb-cl-title-left{display:flex;align-items:center;gap:7px}
+  .kb-cl-name{font-size:13px;font-weight:700}
+  .kb-cl-pct{font-size:11px;font-weight:700;color:var(--kb-muted);background:var(--kb-bg);border:1px solid var(--kb-border);border-radius:20px;padding:1px 8px}
+  .kb-cl-del{padding:4px 10px;border-radius:6px;border:1px solid var(--kb-border);background:var(--kb-surface);font-size:11px;font-weight:600;color:var(--kb-secondary);cursor:pointer;font-family:inherit;transition:all .15s}
+  .kb-cl-del:hover{background:#fef2f2;color:var(--kb-red);border-color:#fca5a5}
+  .kb-cl-bar{height:4px;background:#f0f0f0;border-radius:10px;margin-bottom:8px;overflow:hidden}
+  .kb-cl-bar-fill{height:100%;background:var(--kb-green);border-radius:10px;transition:width .3s}
+  .kb-check-items{display:flex;flex-direction:column;gap:2px;margin-bottom:8px}
+  .kb-check-item{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;transition:background .12s}
+  .kb-check-item:hover{background:var(--kb-bg)}
+  .kb-check-item input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:var(--kb-blue);flex-shrink:0}
+  .kb-check-item label{font-size:13px;cursor:pointer;flex:1}
+  .kb-check-item label.done{text-decoration:line-through;color:var(--kb-muted)}
+  .kb-item-del{width:20px;height:20px;border-radius:4px;border:none;background:transparent;cursor:pointer;color:var(--kb-muted);display:none;align-items:center;justify-content:center;font-size:14px;transition:all .15s}
+  .kb-check-item:hover .kb-item-del{display:flex}
+  .kb-item-del:hover{background:#fef2f2;color:var(--kb-red)}
+  .kb-add-item-form{display:flex;gap:6px}
+  .kb-add-item-input{flex:1;border:1px solid var(--kb-border);border-radius:7px;padding:7px 10px;font-size:12.5px;font-family:inherit;outline:none;background:var(--kb-bg);transition:border-color .15s}
+  .kb-add-item-input:focus{border-color:var(--kb-blue);background:#fff}
+  .kb-add-item-btn{padding:7px 14px;border-radius:7px;border:none;background:var(--kb-blue);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s}
+  .kb-add-item-btn:hover{background:#1d4ed8}
+  /* Save bar */
+  .kb-save-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid var(--kb-border);flex-shrink:0}
+  .kb-btn-save{padding:7px 20px;border-radius:8px;background:var(--kb-blue);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s}
+  .kb-btn-save:hover{background:#1d4ed8}
+  .kb-btn-cancel{padding:7px 16px;border-radius:8px;border:1px solid var(--kb-border);background:var(--kb-surface);font-size:13px;font-weight:600;color:var(--kb-secondary);cursor:pointer;font-family:inherit;transition:all .15s}
+  .kb-btn-cancel:hover{background:var(--kb-bg);color:var(--kb-text)}
+  /* Comments panel */
+  .kb-comments{width:300px;flex-shrink:0;border-left:1px solid var(--kb-border);display:flex;flex-direction:column;overflow:hidden}
+  .kb-comments-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--kb-border);flex-shrink:0;font-size:13px;font-weight:700}
+  .kb-comment-input-wrap{padding:10px 16px;border-bottom:1px solid var(--kb-border);flex-shrink:0}
+  .kb-comment-input{width:100%;border:1px solid var(--kb-border);border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;outline:none;background:var(--kb-bg);resize:none;min-height:36px;max-height:120px;overflow:hidden;transition:border-color .15s,min-height .2s;color:var(--kb-text)}
+  .kb-comment-input:focus{border-color:var(--kb-blue);background:#fff;min-height:70px}
+  .kb-comment-input::placeholder{color:var(--kb-muted)}
+  .kb-comment-submit-row{display:flex;justify-content:flex-end;margin-top:6px}
+  .kb-comment-submit{padding:5px 14px;border-radius:7px;border:none;background:var(--kb-blue);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s}
+  .kb-comment-submit:hover{background:#1d4ed8}
+  .kb-feed{flex:1;overflow-y:auto;padding:10px 16px}
+  .kb-feed::-webkit-scrollbar{width:4px}
+  .kb-feed::-webkit-scrollbar-thumb{background:#e5e7eb;border-radius:10px}
+  .kb-feed-item{display:flex;gap:8px;margin-bottom:12px}
+  .kb-activity-text{font-size:12.5px;color:var(--kb-text);line-height:1.5;flex:1}
+  .kb-activity-time{font-size:11px;color:var(--kb-muted)}
+  .kb-comment-item{background:var(--kb-bg);border-radius:8px;padding:8px 10px;margin-bottom:8px}
+  .kb-comment-item-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+  .kb-comment-item-name{font-size:12px;font-weight:700}
+  .kb-comment-item-time{font-size:11px;color:var(--kb-muted)}
+  .kb-comment-item-text{font-size:12.5px;color:var(--kb-text);line-height:1.4}
+  .kb-avatar{width:26px;height:26px;border-radius:50%;background:var(--kb-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0}
+  /* Mover popover */
+  .kb-move-field{margin-bottom:10px}
+  .kb-move-label{font-size:11px;font-weight:700;color:var(--kb-secondary);margin-bottom:4px}
+  .kb-pop-select{width:100%;border:1px solid var(--kb-border);border-radius:7px;padding:7px 9px;font-size:12px;font-family:inherit;outline:none;background:var(--kb-bg);color:var(--kb-text);cursor:pointer;margin-bottom:8px}
+  .kb-pop-btn{width:100%;padding:8px;border-radius:8px;background:var(--kb-blue);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s;margin-top:4px}
+  .kb-pop-btn:hover{background:#1d4ed8}
+
+  /* ═══ MODAL ═══════════════════════════════════════════ */
+  .modal-overlay{position:fixed;inset:0;background:rgba(15,20,30,.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
+  .modal-overlay.open{opacity:1;pointer-events:all}
+  .modal{background:var(--surface);border-radius:14px;width:900px;max-width:calc(100vw - 32px);height:88vh;max-height:700px;box-shadow:0 32px 80px rgba(0,0,0,.2);display:flex;flex-direction:column;transform:translateY(16px) scale(.97);transition:transform .22s cubic-bezier(.22,1,.36,1);overflow:hidden;position:relative}
+  .modal-overlay.open .modal{transform:translateY(0) scale(1)}
+  .modal-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 8px;border-bottom:1px solid var(--border);flex-shrink:0;gap:10px}
+  .modal-bar-left{display:flex;align-items:center;gap:8px;position:relative}
+  .modal-bar-right{display:flex;align-items:center;gap:4px}
+  .modal-status-btn{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;font-family:inherit;transition:all .15s}
+  .modal-status-btn:hover{border-color:#d1d5db;background:#e9ebee}
+  .modal-status-dot{width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0}
+  .modal-icon-btn,.modal-close-btn{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-muted);transition:all .15s;background:transparent;border:none}
+  .modal-close-btn{font-size:20px;font-family:inherit}
+  .modal-icon-btn:hover,.modal-close-btn:hover{background:var(--bg);color:var(--text-primary)}
+  .modal-title-row{display:flex;align-items:flex-start;gap:10px;padding:14px 20px 10px;flex-shrink:0}
+  .modal-title-circle{width:20px;height:20px;border-radius:50%;border:2px solid #d1d5db;flex-shrink:0;margin-top:4px;cursor:pointer;transition:border-color .15s}
+  .modal-title-circle:hover{border-color:var(--blue)}
+  .modal-title-circle.done{background:var(--green);border-color:var(--green)}
+  .modal-title-input{flex:1;font-size:20px;font-weight:800;letter-spacing:-.4px;border:none;outline:none;background:transparent;color:var(--text-primary);font-family:inherit;resize:none;line-height:1.3}
+  .modal-labels-row{display:flex;align-items:center;gap:6px;padding:0 20px 10px 50px;flex-wrap:wrap;flex-shrink:0}
+  .label-chip{height:20px;border-radius:4px;padding:0 10px;font-size:11px;font-weight:700;color:#fff;display:flex;align-items:center;cursor:pointer;transition:filter .15s}
+  .label-chip:hover{filter:brightness(1.1)}
+  .modal-toolbar{display:flex;align-items:center;gap:6px;padding:0 20px 12px;flex-shrink:0;position:relative;flex-wrap:wrap}
+  .tb-btn{display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;border:1px solid var(--border);background:var(--surface);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;position:relative}
+  .tb-btn:hover{background:var(--bg);color:var(--text-primary);border-color:#d1d5db}
+  .tb-btn.active{background:var(--blue-light);color:var(--blue);border-color:#bfdbfe}
+  .popover{position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-pop);z-index:500;display:none;min-width:280px}
+  .popover.open{display:block;animation:kbPopIn .14s ease}
+  .popover-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px;border-bottom:1px solid var(--border)}
+  .popover-title{font-size:12px;font-weight:700;color:var(--text-primary)}
+  .popover-close{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-muted);font-size:16px;background:transparent;border:none;font-family:inherit}
+  .popover-close:hover{background:var(--bg);color:var(--text-primary)}
+  .popover-body{padding:10px 14px 14px}
+  .pop-input{width:100%;border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:12.5px;font-family:inherit;outline:none;background:var(--bg);color:var(--text-primary);transition:border-color .15s;margin-bottom:10px}
+  .pop-input:focus{border-color:var(--blue);background:#fff}
+  .pop-section-label{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px}
+  .pop-select{width:100%;border:1px solid var(--border);border-radius:7px;padding:7px 9px;font-size:12px;font-family:inherit;outline:none;background:var(--bg);color:var(--text-primary);cursor:pointer;margin-bottom:8px}
+  .pop-btn-full{width:100%;padding:8px;border-radius:8px;background:var(--blue);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s;margin-top:4px}
+  .pop-btn-full:hover{background:#1d4ed8}
+  .pop-btn-ghost{width:100%;padding:7px;border-radius:8px;background:transparent;color:var(--text-secondary);border:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;margin-top:4px}
+  .pop-btn-ghost:hover{background:var(--bg);color:var(--text-primary)}
+  /* Etiquetas */
+  .label-list{display:flex;flex-direction:column;gap:4px}
+  .label-row{display:flex;align-items:center;gap:8px;padding:3px 0}
+  .label-row input[type=checkbox]{width:14px;height:14px;accent-color:var(--blue);flex-shrink:0}
+  .label-color-bar{flex:1;height:28px;border-radius:5px;cursor:pointer;display:flex;align-items:center;padding:0 10px;font-size:11px;font-weight:600;color:#fff;transition:filter .15s}
+  .label-color-bar:hover{filter:brightness(1.08)}
+  /* Datas */
+  .pop-dates{min-width:310px}
+  .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .cal-nav-btn{width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:14px}
+  .cal-nav-btn:hover{background:var(--bg)}
+  .cal-month{font-size:13px;font-weight:700}
+  .cal-grid{width:100%;border-collapse:collapse}
+  .cal-grid th{font-size:10px;font-weight:700;color:var(--text-muted);text-align:center;padding:4px 0;text-transform:uppercase}
+  .cal-grid td{text-align:center;padding:2px}
+  .cal-day{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;margin:auto;transition:background .12s,color .12s}
+  .cal-day:hover{background:var(--bg)}
+  .cal-day.today{border:2px solid var(--blue);font-weight:700;color:var(--blue)}
+  .cal-day.selected{background:var(--blue);color:#fff;font-weight:700}
+  .date-field-label{font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:4px}
+  .date-input{width:100%;border:1px solid var(--border);border-radius:7px;padding:6px 9px;font-size:12px;font-family:inherit;outline:none;background:var(--bg)}
+  .date-input:focus{border-color:var(--blue);background:#fff}
+  /* Membros */
+  .member-list{display:flex;flex-direction:column;gap:3px}
+  .member-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;transition:background .12s}
+  .member-row:hover{background:var(--bg)}
+  .member-row.selected{background:var(--blue-light)}
+  .member-row-name{font-size:13px;font-weight:500}
+  .member-check{margin-left:auto;color:var(--blue);display:none}
+  .member-row.selected .member-check{display:block}
+  /* Modal body */
+  .modal-body{display:flex;flex:1;overflow:hidden;border-top:1px solid var(--border)}
+  .modal-main{flex:1;overflow-y:auto;padding:18px 22px 22px}
+  .modal-main::-webkit-scrollbar{width:4px}
+  .modal-main::-webkit-scrollbar-thumb{background:#e5e7eb;border-radius:10px}
+  .section-head{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px}
+  .editor-area{width:100%;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;color:var(--text-primary);resize:vertical;min-height:100px;outline:none;background:var(--surface);transition:border-color .15s}
+  .editor-area:focus{border-color:var(--blue)}
+  /* Checklists */
+  .checklist-section{margin-top:18px}
+  .checklist-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .checklist-title-left{display:flex;align-items:center;gap:7px}
+  .checklist-title-name{font-size:13px;font-weight:700}
+  .checklist-pct-badge{font-size:11px;font-weight:700;color:var(--text-secondary);background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:1px 8px}
+  .checklist-del-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);font-size:11px;font-weight:600;color:var(--text-secondary);cursor:pointer;font-family:inherit;transition:all .15s}
+  .checklist-del-btn:hover{background:#fef2f2;color:var(--red);border-color:#fca5a5}
+  .checklist-bar{height:4px;background:var(--bg);border-radius:10px;margin-bottom:8px;overflow:hidden}
+  .checklist-bar-fill{height:100%;background:var(--green);border-radius:10px;transition:width .3s}
+  .check-items{display:flex;flex-direction:column;gap:2px;margin-bottom:8px}
+  .check-item{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;transition:background .12s}
+  .check-item:hover{background:var(--bg)}
+  .check-item input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:var(--blue);flex-shrink:0}
+  .check-item label{font-size:13px;cursor:pointer;flex:1}
+  .check-item label.done-label{text-decoration:line-through;color:var(--text-muted)}
+  .check-item-del{width:20px;height:20px;border-radius:4px;border:none;background:transparent;cursor:pointer;color:var(--text-muted);display:none;align-items:center;justify-content:center;font-size:14px;transition:all .15s}
+  .check-item:hover .check-item-del{display:flex}
+  .check-item-del:hover{background:#fef2f2;color:var(--red)}
+  .add-check-form{display:flex;gap:6px}
+  .add-check-input{flex:1;border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:12.5px;font-family:inherit;outline:none;background:var(--bg);transition:border-color .15s}
+  .add-check-input:focus{border-color:var(--blue);background:#fff}
+  .add-check-btn{padding:7px 14px;border-radius:7px;border:none;background:var(--blue);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s}
+  .add-check-btn:hover{background:#1d4ed8}
+  /* Comentários */
+  .modal-comments{width:300px;flex-shrink:0;border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+  .comments-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+  .comments-header-left{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700}
+  .comment-input-wrap{padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+  .comment-input{width:100%;border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;outline:none;background:var(--bg);resize:none;min-height:36px;max-height:120px;overflow:hidden;transition:border-color .15s,min-height .2s;color:var(--text-primary)}
+  .comment-input:focus{border-color:var(--blue);background:#fff;min-height:70px}
+  .comment-input::placeholder{color:var(--text-muted)}
+  .comment-submit-row{display:flex;justify-content:flex-end;margin-top:6px}
+  .comment-submit{padding:5px 14px;border-radius:7px;border:none;background:var(--blue);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s}
+  .comment-submit:hover{background:#1d4ed8}
+  .activity-feed{flex:1;overflow-y:auto;padding:10px 16px}
+  .activity-feed::-webkit-scrollbar{width:4px}
+  .activity-feed::-webkit-scrollbar-thumb{background:#e5e7eb;border-radius:10px}
+  .activity-item{display:flex;gap:8px;margin-bottom:12px}
+  .activity-text{font-size:12.5px;color:var(--text-primary);line-height:1.5;flex:1}
+  .activity-time{font-size:11px;color:var(--text-muted)}
+  .comment-item{background:var(--bg);border-radius:8px;padding:8px 10px;margin-bottom:8px}
+  .comment-item-text{font-size:12.5px;color:var(--text-primary);line-height:1.4}
+  /* Save bar */
+  .modal-save-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid var(--border);flex-shrink:0}
+  .modal-save-bar-left{display:flex;align-items:center;gap:8px}
+  .btn-save{padding:7px 20px;border-radius:8px;background:var(--blue);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s}
+  .btn-save:hover{background:#1d4ed8}
+  .btn-cancel{padding:7px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-size:13px;font-weight:600;color:var(--text-secondary);cursor:pointer;font-family:inherit;transition:all .15s}
+  .btn-cancel:hover{background:var(--bg);color:var(--text-primary)}
+  .btn-fmt{font-size:12px;color:var(--text-muted);text-decoration:none}
+  .btn-fmt:hover{color:var(--text-primary)}
+  .btn-delete-card{display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;border:1px solid transparent;background:transparent;font-size:13px;font-weight:600;color:var(--text-muted);cursor:pointer;font-family:inherit;transition:all .15s}
+  .btn-delete-card:hover{background:var(--red-light);color:var(--red);border-color:#fca5a5}
+  /* avatar */
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
+  .avatar.xs{width:22px;height:22px;font-size:9px}
+
+  /* ═══ RESPONSIVO ══════════════════════════════════════ */
+
+  /* Tablet (≤ 768px) */
+  @media (max-width:768px){
+    /* Header */
+    .kb-header{flex-wrap:wrap;gap:8px;padding:0 0 12px}
+    /* Colunas um pouco menores */
+    .kb-col{width:240px;max-height:calc(100vh - 260px)}
+    /* Modal: tela quase cheia, comentários abaixo da área principal */
+    .modal{width:100%;max-width:100%;height:100%;max-height:100%;border-radius:0;
+           transform:translateY(20px) scale(1)}
+    .modal-overlay.open .modal{transform:translateY(0) scale(1)}
+    .modal-overlay{align-items:flex-end}
+    .modal-body{flex-direction:column}
+    .modal-comments{width:100%;border-left:none;border-top:1px solid var(--border);max-height:220px}
+    .modal-toolbar{overflow-x:auto;flex-wrap:nowrap;padding-bottom:6px}
+    .modal-toolbar::-webkit-scrollbar{height:3px}
+    .modal-toolbar::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:10px}
+    .popover{position:fixed;top:auto;bottom:0;left:0!important;right:0;border-radius:14px 14px 0 0;min-width:unset;width:100%;z-index:600}
+    .pop-dates{min-width:unset}
+  }
+
+  /* ── Campos meta do modal (área + progresso) ── */
+  .modal-meta-row{display:flex;gap:12px;margin-top:14px;flex-wrap:wrap}
+  .modal-meta-field{flex:1;min-width:130px;display:flex;flex-direction:column;gap:4px}
+  .modal-meta-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--kb-secondary)}
+  .modal-meta-input{border:1px solid var(--kb-border);border-radius:7px;padding:6px 9px;font-size:12.5px;font-family:inherit;color:var(--kb-text);background:var(--kb-bg);outline:none;transition:border-color .15s}
+  .modal-meta-input:focus{border-color:var(--kb-blue);background:#fff}
+  .modal-progress-wrap{display:flex;align-items:center;gap:6px}
+  .modal-progress-wrap .modal-meta-input{width:60px;flex-shrink:0}
+  .modal-progress-pct{font-size:12px;color:var(--kb-secondary);flex-shrink:0}
+  .modal-progress-bar-bg{flex:1;height:6px;background:#e5e7eb;border-radius:10px;overflow:hidden}
+  .modal-progress-bar-fill{height:100%;background:var(--kb-blue);border-radius:10px;transition:width .25s}
+
+  /* ── Drag & Drop ── */
+  .kb-card[draggable=true]{cursor:grab}
+  .kb-card[draggable=true]:active{cursor:grabbing}
+  .kb-card.kb-dragging{opacity:.35;cursor:grabbing;box-shadow:none!important;transform:none!important}
+  .kb-col-body.kb-drag-over{background:var(--kb-blue-light);outline:2px dashed var(--kb-blue);outline-offset:-4px;border-radius:8px;transition:background .15s}
+  .kb-drop-ghost{height:72px;border:2px dashed #93c5fd;border-radius:8px;background:#eff6ff;flex-shrink:0;pointer-events:none}
+
+  /* Mobile (≤ 480px) */
+  @media (max-width:480px){
+    /* Header: título e botão empilhados */
+    .kb-header{flex-direction:column;align-items:flex-start;gap:10px}
+    .kb-header > button{width:100%;justify-content:center}
+    /* Board: colunas full-width com snap scroll */
+    .kb-wrap{gap:10px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+             padding-bottom:16px}
+    .kb-col{width:calc(100vw - 48px);flex-shrink:0;scroll-snap-align:start;
+            max-height:calc(100vh - 280px)}
+    .kb-add-col{width:calc(100vw - 48px);scroll-snap-align:start}
+    /* Modal: slide-up full screen */
+    .modal-overlay{padding:0;align-items:flex-end}
+    .modal{border-radius:20px 20px 0 0;height:94vh;max-height:94vh;width:100%;max-width:100%}
+    /* Barra de título menor */
+    .modal-title-input{font-size:16px}
+    /* Painel de comentários compacto */
+    .modal-comments{max-height:180px}
+    .comment-input-wrap{padding:8px 12px}
+    /* Labels row sem indent */
+    .modal-labels-row{padding-left:20px}
+    /* Botão "Nova coluna" — só ícone */
+    .kb-btn-ghost .kb-btn-text{display:none}
+  }
+
+  /* ── Modal de formulário (novo quadro / nova coluna / novo card) ── */
+  .kb-form-modal{
+    background:var(--surface,#fff);
+    border-radius:14px;
+    width:420px;
+    max-width:calc(100vw - 32px);
+    box-shadow:0 24px 60px rgba(0,0,0,.18);
+    overflow:hidden;
+    transform:translateY(12px) scale(.97);
+    transition:transform .22s cubic-bezier(.22,1,.36,1);
+  }
+  .g-modal-backdrop.open .kb-form-modal{transform:none}
+  .kb-form-modal-hd{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 22px 16px;border-bottom:1px solid var(--line,#e4e7ee);
+  }
+  .kb-form-modal-title{font-size:15px;font-weight:800;letter-spacing:-.3px;color:var(--text,#0f172a)}
+  .kb-form-modal-x{
+    display:flex;align-items:center;justify-content:center;
+    width:28px;height:28px;border-radius:6px;
+    border:none;background:transparent;color:var(--muted,#64748b);
+    cursor:pointer;transition:background .12s,color .12s;
+  }
+  .kb-form-modal-x:hover{background:var(--bg,#f8fafc);color:var(--text,#0f172a)}
+  .kb-form-modal-bd{padding:20px 22px}
+  .kb-form-modal-label{
+    display:block;font-size:11.5px;font-weight:700;color:var(--muted,#64748b);
+    text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;
+  }
+  .kb-form-modal-input{
+    width:100%;padding:9px 12px;
+    border:1px solid var(--line,#e4e7ee);border-radius:8px;
+    font-size:14px;font-family:inherit;color:var(--text,#0f172a);
+    background:var(--bg,#f8fafc);outline:none;
+    transition:border-color .15s,background .15s;
+    box-sizing:border-box;
+  }
+  .kb-form-modal-input:focus{border-color:var(--blue,#2563eb);background:#fff}
+  .kb-form-modal-ft{
+    display:flex;justify-content:flex-end;gap:8px;
+    padding:14px 22px 18px;border-top:1px solid var(--line,#e4e7ee);
+  }
+</style>
+
+<!-- Board header -->
+<div class="kb-header">
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <!-- Seletor de quadro -->
+    <div style="position:relative">
+      <button class="kb-btn-ghost" style="font-size:16px;font-weight:800;border:none;padding:4px 8px;gap:8px" onclick="toggleQuadroMenu()">
+        {{ quadro.nome }}
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div id="quadroMenu" style="display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:220px;background:#fff;border:1px solid var(--kb-border);border-radius:10px;box-shadow:var(--kb-shadow-lg);z-index:200;padding:6px 0">
+        {% for q in todos_quadros %}
+        <a href="{% url 'core:projetos_kanban_quadro' q.pk %}"
+           style="display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:13px;font-weight:{% if q.pk == quadro.pk %}700{% else %}500{% endif %};color:var(--kb-text);text-decoration:none;transition:background .12s"
+           onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="7" height="7" rx="1"/><rect x="14" y="4" width="7" height="4" rx="1"/><rect x="14" y="10" width="7" height="10" rx="1"/><rect x="3" y="13" width="7" height="7" rx="1"/></svg>
+          {{ q.nome }}
+          {% if q.pk == quadro.pk %}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:auto;color:var(--kb-blue)"><path d="M20 6L9 17l-5-5"/></svg>{% endif %}
+        </a>
+        {% endfor %}
+        <div style="border-top:1px solid var(--kb-border);margin:4px 0"></div>
+        <button onclick="openQuadroModal();document.getElementById('quadroMenu').style.display='none'"
+                style="display:flex;align-items:center;gap:8px;width:100%;padding:8px 14px;font-size:13px;font-weight:600;color:var(--kb-blue);background:none;border:none;cursor:pointer;font-family:inherit"
+                onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          Novo quadro
+        </button>
+      </div>
+    </div>
+    <span class="kb-subtitle">{{ listas|length }} coluna{{ listas|length|pluralize:"s" }}</span>
+  </div>
+  <button class="kb-btn-ghost" onclick="addColumn()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+    <span class="kb-btn-text">Nova coluna</span>
+  </button>
+</div>
+
+<!-- Modal: Novo Quadro -->
+<div id="quadroOverlay" class="g-modal-backdrop" onclick="if(event.target===this)closeQuadroModal()">
+  <div class="kb-form-modal" role="dialog" aria-modal="true">
+    <div class="kb-form-modal-hd">
+      <span class="kb-form-modal-title">Novo quadro</span>
+      <button type="button" class="kb-form-modal-x" onclick="closeQuadroModal()" aria-label="Fechar">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <path d="M2 2l12 12M14 2L2 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    <form method="post" action="{% url 'core:kanban_quadro_criar' %}">
+      {% csrf_token %}
+      <div class="kb-form-modal-bd">
+        <label class="kb-form-modal-label" for="quadroNomeInput">Nome do quadro</label>
+        <input class="kb-form-modal-input" type="text" name="nome" id="quadroNomeInput"
+               required placeholder="Ex: Organização dos Projetos"
+               onkeydown="if(event.key==='Escape')closeQuadroModal()">
+      </div>
+      <div class="kb-form-modal-ft">
+        <button type="button" class="g-modal-btn g-modal-btn-cancel" onclick="closeQuadroModal()">Cancelar</button>
+        <button type="submit" class="g-modal-btn g-modal-btn-primary">Criar quadro</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Board -->
+<div class="kb-wrap" id="kbBoard">
+  {% for lista in listas %}
+  <div class="kb-col">
+    <div class="kb-col-hd">
+      <div class="kb-col-accent" style="background:{{ lista.cor }}"></div>
+      <div class="kb-col-row">
+        <div class="kb-col-left">
+          <span class="kb-badge" style="background:color-mix(in srgb,{{ lista.cor }} 12%,#fff);border-color:color-mix(in srgb,{{ lista.cor }} 32%,#fff);color:{{ lista.cor }}">{{ lista.cartoes.all|length }}</span>
+          <span class="kb-col-name">{{ lista.nome }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="kb-col-body" data-lista-id="{{ lista.pk }}">
+      {% for cartao in lista.cartoes.all %}
+      <div class="kb-card"
+           draggable="true"
+           data-card-id="{{ cartao.pk }}"
+           data-lista-id="{{ lista.pk }}"
+           data-title="{{ cartao.titulo|escapejs }}"
+           data-lista-nome="{{ lista.nome|escapejs }}"
+           data-lista-cor="{{ lista.cor }}"
+           onclick="openModal(this.dataset.title,this.dataset.listaNome,this.dataset.listaCor,this.dataset.cardId,this.dataset.listaId)">
+        <div class="kb-card-bar" style="background:{{ lista.cor }}"></div>
+        <div class="kb-card-top">
+          <span class="kb-card-title">{{ cartao.titulo }}</span>
+          {% if cartao.progresso >= 100 %}
+            <span class="kb-card-pct done">{{ cartao.progresso }}%</span>
+          {% elif cartao.progresso > 0 %}
+            <span class="kb-card-pct mid">{{ cartao.progresso }}%</span>
+          {% else %}
+            <span class="kb-card-pct low">0%</span>
+          {% endif %}
+        </div>
+        <div class="kb-progress">
+          <div class="kb-progress-fill" style="width:{{ cartao.progresso }}%;background:{% if cartao.progresso >= 100 %}#16a34a{% else %}#2563eb{% endif %}"></div>
+        </div>
+        {% if cartao.etiquetas.all %}
+        <div class="kb-chips">
+          {% for etq in cartao.etiquetas.all %}
+            <span class="kb-chip" style="--c:{{ etq.cor }}" title="{{ etq.nome }}">{{ etq.nome }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <div class="kb-card-meta">
+          <div class="kb-card-meta-left">
+            {% if cartao.area %}<span class="kb-card-area">{{ cartao.area }}</span>{% endif %}
+            {% if cartao.cl_total %}
+            <span class="kb-cl-badge" title="Itens de checklist concluídos">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              {{ cartao.cl_feitos }}/{{ cartao.cl_total }}
+            </span>
+            {% endif %}
+            {% if cartao.data_entrega %}
+            <span class="kb-card-date{% if cartao.atrasado %} atrasado{% endif %}"
+                  {% if cartao.atrasado %}title="Em atraso"{% endif %}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              {{ cartao.data_entrega|date:"d/m" }}
+            </span>
+            {% endif %}
+          </div>
+          {% if cartao.membros.all %}
+          <div class="kb-card-avs">
+            {% for m in cartao.membros.all|slice:":3" %}
+              <span class="kb-card-av" title="{{ m.get_full_name|default:m.username }}">{{ m.username|first|upper }}</span>
+            {% endfor %}
+            {% if cartao.membros.all|length > 3 %}
+              <span class="kb-card-av more">+{{ cartao.membros.all|length|add:"-3" }}</span>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% empty %}
+      <div class="kb-empty">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg>
+        Sem cards nesta coluna
+      </div>
+      {% endfor %}
+    </div>
+    <div class="kb-col-ft">
+      <button class="kb-add-card" onclick="quickAdd({{ lista.pk }}, '{{ lista.nome|escapejs }}', '{{ lista.cor }}', this)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Adicionar card
+      </button>
+    </div>
+  </div>
+  {% endfor %}
+
+  <!-- Adicionar coluna -->
+  <div class="kb-add-col" onclick="addColumn()">
+    <div class="kb-add-col-inner">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
+      Adicionar coluna
+    </div>
+  </div>
+</div>
+
+<!-- Modal de entrada genérico (substitui prompt() nativo) -->
+<div id="kb-prompt-backdrop" class="g-modal-backdrop" onclick="if(event.target===this)_kbPromptClose()">
+  <div class="kb-form-modal" role="dialog" aria-modal="true">
+    <div class="kb-form-modal-hd">
+      <span class="kb-form-modal-title" id="kb-prompt-title"></span>
+      <button type="button" class="kb-form-modal-x" onclick="_kbPromptClose()" aria-label="Fechar">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <path d="M2 2l12 12M14 2L2 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    <div class="kb-form-modal-bd">
+      <label class="kb-form-modal-label" id="kb-prompt-label" for="kb-prompt-input"></label>
+      <input class="kb-form-modal-input" type="text" id="kb-prompt-input" autocomplete="off"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();_kbPromptSubmit()}else if(event.key==='Escape')_kbPromptClose()">
+    </div>
+    <div class="kb-form-modal-ft">
+      <button type="button" class="g-modal-btn g-modal-btn-cancel" onclick="_kbPromptClose()">Cancelar</button>
+      <button type="button" class="g-modal-btn g-modal-btn-primary" id="kb-prompt-ok">Criar</button>
+    </div>
+  </div>
+</div>
+
+{% include "projetos/_kanban_modal.html" %}
+{% csrf_token %}
+
+<script>
+window.KANBAN_URLS = {
+  cartao_criar:           '{% url "core:kanban_cartao_criar" %}',
+  cartao_atualizar:       '/projetos/kanban/cartao/__PK__/atualizar/',
+  cartao_mover:           '/projetos/kanban/cartao/__PK__/mover/',
+  cartao_excluir:         '/projetos/kanban/cartao/__PK__/excluir/',
+  cartao_etiqueta:        '/projetos/kanban/cartao/__PK__/etiqueta/',
+  cartao_membro:          '/projetos/kanban/cartao/__PK__/membro/',
+  cartao_comentar:        '/projetos/kanban/cartao/__PK__/comentar/',
+  checklist_criar:        '/projetos/kanban/cartao/__PK__/checklist/',
+  checklist_excluir:      '/projetos/kanban/checklist/__PK__/excluir/',
+  checklist_item_criar:   '/projetos/kanban/checklist/__PK__/item/novo/',
+  item_toggle:            '/projetos/kanban/item/__PK__/toggle/',
+  item_excluir:           '/projetos/kanban/item/__PK__/excluir/',
+  lista_criar:            '/projetos/kanban/{{ quadro.pk }}/lista/nova/',
+};
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  /* ── CSRF / fetch helpers ── */
+  function _csrf() {
+    const i = document.querySelector('[name=csrfmiddlewaretoken]');
+    return i ? i.value : '';
+  }
+  function _url(name, pk) {
+    const base = (window.KANBAN_URLS || {})[name] || '';
+    return pk != null ? base.replace('__PK__', pk) : base;
+  }
+  async function kpost(name, pk, data) {
+    const url = pk == null ? _url(name) : _url(name, pk);
+    if (!url) return { ok: false };
+    const body = new FormData();
+    for (const k in (data || {})) body.append(k, data[k]);
+    try {
+      const r = await fetch(url, { method: 'POST', headers: { 'X-CSRFToken': _csrf() }, body });
+      if (!r.ok) return { ok: false };
+      return await r.json();
+    } catch (e) { return { ok: false }; }
+  }
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  const _ME = '{{ request.user.get_full_name|default:request.user.username|escapejs }}';
+
+  /* Bloqueia ações sem cartão carregado, com aviso suave (reutiliza GModal) */
+  function requireCard() {
+    if (currentCardId) return true;
+    if (window.GModal && GModal.alert) {
+      GModal.alert('Nenhum cartão aberto', 'Reabra o cartão e tente novamente.');
+    }
+    return false;
+  }
+  /* Envolve um handler para que um erro nele não derrube os demais botões */
+  function safe(fn) {
+    return function (...args) {
+      try { return fn.apply(this, args); }
+      catch (e) { console.error('Erro no handler do kanban:', e); }
+    };
+  }
+
+  /* ── Estado global do modal ── */
+  let currentCardId  = null;
+  let currentListaId = null;
+  let openPop        = null;
+  let calDate        = new Date();
+  let activeLabels   = [];   // [{id, color, name}]
+  let activeMembers  = [];   // [{id, display}]
+  let checklists     = [];   // [{id, title, items:[{itemId,text,done}]}]
+  let comments       = [];   // [{tipo, autor, texto, criado_em}]
+
+  /* ══════════════════════════════════════════════════════════════
+     ABRIR / FECHAR MODAL
+  ══════════════════════════════════════════════════════════════ */
+  async function openModal(title, listaNome, listaCor, cardId, listaId) {
+    currentCardId  = Number(cardId)  || null;
+    currentListaId = Number(listaId) || null;
+    activeLabels = []; activeMembers = []; checklists = []; comments = [];
+
+    /* Estado inicial enquanto carrega */
+    document.getElementById('modalTitleInput').value = title || '';
+    document.getElementById('statusLabel').textContent  = listaNome || '';
+    document.getElementById('statusDot').style.background = listaCor || '#2563eb';
+    document.getElementById('modalCover').style.height    = '0';
+    document.getElementById('modalCover').style.background = '';
+    document.getElementById('titleCircle').classList.remove('done');
+    document.getElementById('descArea').value = '';
+    document.getElementById('areaInput').value = '';
+    document.getElementById('progressoInput').value = '';
+    document.getElementById('progressoFill').style.width = '0%';
+    document.getElementById('dateStart').value = '';
+    document.getElementById('dateEnd').value   = '';
+    document.getElementById('labelsRow').innerHTML = '';
+    document.getElementById('checklistContainer').innerHTML =
+      '<p style="font-size:12px;color:#9ca3af;padding:8px 0">Carregando…</p>';
+    document.getElementById('activityFeed').innerHTML =
+      '<p style="font-size:12px;color:#9ca3af;padding:8px 0">Carregando…</p>';
+
+    /* Sincroniza selects de mover */
+    ['moveListSelect','moveListSelectTb'].forEach(id => {
+      const sel = document.getElementById(id);
+      if (sel) for (const o of sel.options) { if (String(o.value) === String(listaId)) { sel.value = o.value; break; } }
+    });
+
+    document.getElementById('modalOverlay').classList.add('open');
+    if (openPop) { openPop.classList.remove('open'); openPop = null; }
+    if (typeof _kbSyncActive === 'function') _kbSyncActive();
+
+    /* Carrega dados reais do servidor */
+    if (!currentCardId) { renderChecklists(); renderFeed(); return; }
+    try {
+      const r = await fetch(`/projetos/kanban/cartao/${currentCardId}/`,
+        { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+
+      document.getElementById('modalTitleInput').value = d.titulo || '';
+      autoResize(document.getElementById('modalTitleInput'));
+
+      document.getElementById('descArea').value = d.descricao || '';
+      autoResize(document.getElementById('descArea'));
+
+      document.getElementById('areaInput').value      = d.area || '';
+      document.getElementById('progressoInput').value = d.progresso ?? '';
+      document.getElementById('progressoFill').style.width = (d.progresso || 0) + '%';
+
+      if (d.concluido) document.getElementById('titleCircle').classList.add('done');
+
+      if (d.capa_cor) {
+        document.getElementById('modalCover').style.height     = '80px';
+        document.getElementById('modalCover').style.background = d.capa_cor;
+      }
+
+      if (d.data_inicio)  document.getElementById('dateStart').value = d.data_inicio;
+      if (d.data_entrega) document.getElementById('dateEnd').value   = d.data_entrega;
+
+      /* Etiquetas */
+      const etqIds = new Set(d.etiquetas.map(e => e.id));
+      activeLabels  = d.etiquetas.map(e => ({ id: e.id, color: e.cor, name: e.nome }));
+      document.querySelectorAll('#labelList .label-row input[type=checkbox]').forEach(cb => {
+        cb.checked = etqIds.has(Number(cb.dataset.etqId));
+      });
+      renderLabels();
+
+      /* Membros */
+      const mbrIds = new Set(d.membros.map(m => m.id));
+      activeMembers = d.membros.map(m => ({ id: m.id, display: m.display }));
+      document.querySelectorAll('#memberList .member-row').forEach(row => {
+        row.classList.toggle('selected', mbrIds.has(Number(row.dataset.uid)));
+      });
+
+      /* Checklists */
+      checklists = d.checklists.map(cl => ({
+        id:    cl.id,
+        title: cl.titulo,
+        items: cl.itens.map(it => ({ itemId: it.id, text: it.texto, done: it.concluido })),
+      }));
+      renderChecklists();
+
+      /* Atividades */
+      comments = d.atividades;
+      renderFeed();
+
+    } catch(e) {
+      console.error('Erro ao carregar card:', e);
+      renderChecklists();
+      comments = [];
+      renderFeed();
+    }
+  }
+
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('open');
+    if (openPop) { openPop.classList.remove('open'); openPop = null; }
+    if (typeof _kbSyncActive === 'function') _kbSyncActive();
+  }
+  function handleOverlayClick(e) { if (e.target.id === 'modalOverlay') closeModal(); }
+
+  /* ── ESC fecha modal ou popover ── */
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (openPop) { openPop.classList.remove('open'); openPop = null; }
+    if (typeof _kbSyncActive === 'function') _kbSyncActive();
+    else if (document.getElementById('modalOverlay').classList.contains('open')) closeModal();
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     AUTO-SAVE on blur
+  ══════════════════════════════════════════════════════════════ */
+  function autoSave(field, value) {
+    if (currentCardId) kpost('cartao_atualizar', currentCardId, { [field]: value });
+  }
+  document.getElementById('modalTitleInput').addEventListener('blur', e =>
+    autoSave('titulo', e.target.value));
+  document.getElementById('descArea').addEventListener('blur', e =>
+    autoSave('descricao', e.target.value));
+  document.getElementById('areaInput').addEventListener('blur', e =>
+    autoSave('area', e.target.value));
+  document.getElementById('progressoInput').addEventListener('input', e => {
+    const v = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+    document.getElementById('progressoFill').style.width = v + '%';
+  });
+  document.getElementById('progressoInput').addEventListener('blur', e =>
+    autoSave('progresso', e.target.value));
+
+  /* ══════════════════════════════════════════════════════════════
+     POPOVERS
+  ══════════════════════════════════════════════════════════════ */
+  /* Marca como .active o botão da toolbar cujo popover está aberto (deriva de openPop) */
+  function _kbSyncActive() {
+    document.querySelectorAll('.tb-btn.active').forEach(b => b.classList.remove('active'));
+    if (openPop) {
+      const trg = document.querySelector(`.tb-btn[onclick*="${openPop.id}"]`);
+      if (trg) trg.classList.add('active');
+    }
+  }
+  function kbTogglePopover(id, triggerEl) {
+    const pop = document.getElementById(id);
+    if (!pop) return;
+    if (openPop && openPop !== pop) { openPop.classList.remove('open'); openPop = null; }
+    if (pop.classList.contains('open')) {
+      pop.classList.remove('open'); openPop = null;
+    } else {
+      if (triggerEl) {
+        const toolbar = document.getElementById('modalToolbar');
+        const tbRect  = toolbar.getBoundingClientRect();
+        const trRect  = triggerEl.getBoundingClientRect();
+        pop.style.left  = Math.max(0, trRect.left - tbRect.left) + 'px';
+        pop.style.right = 'auto';
+      }
+      pop.classList.add('open');
+      openPop = pop;
+      if (id === 'popDatas') buildCal();
+    }
+    _kbSyncActive();
+  }
+  function closePopover(id) {
+    const pop = document.getElementById(id);
+    pop.classList.remove('open');
+    if (openPop === pop) openPop = null;
+    _kbSyncActive();
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     ETIQUETAS
+  ══════════════════════════════════════════════════════════════ */
+  function toggleLabel(cb, etqId, color, name) {
+    if (!requireCard()) { cb.checked = !cb.checked; return; }
+    if (cb.checked) {
+      if (!activeLabels.find(l => l.id === etqId)) activeLabels.push({ id: etqId, color, name });
+    } else {
+      activeLabels = activeLabels.filter(l => l.id !== etqId);
+    }
+    renderLabels();
+    updateCardLabels();
+    kpost('cartao_etiqueta', currentCardId, { etiqueta_id: etqId });
+  }
+  /* Reflete as etiquetas atuais nos chips do .kb-card do quadro */
+  function _boardCard() {
+    return currentCardId
+      ? document.querySelector(`.kb-card[data-card-id="${currentCardId}"]`)
+      : null;
+  }
+  function updateCardLabels() {
+    const card = _boardCard(); if (!card) return;
+    let chips = card.querySelector('.kb-chips');
+    if (!activeLabels.length) { if (chips) chips.remove(); return; }
+    if (!chips) {
+      chips = document.createElement('div');
+      chips.className = 'kb-chips';
+      const anchor = card.querySelector('.kb-progress') || card.querySelector('.kb-card-top');
+      if (anchor) anchor.insertAdjacentElement('afterend', chips);
+      else return;
+    }
+    chips.innerHTML = activeLabels
+      .map(l => `<span class="kb-chip" style="--c:${l.color}" title="${escHtml(l.name)}">${escHtml(l.name)}</span>`)
+      .join('');
+  }
+  function renderLabels() {
+    document.getElementById('labelsRow').innerHTML = activeLabels
+      .map(l => `<div class="label-chip" style="background:${l.color}">${escHtml(l.name)}</div>`)
+      .join('');
+  }
+  function filterLabels(q) {
+    document.querySelectorAll('#labelList .label-row').forEach(row => {
+      row.style.display = row.dataset.label.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     MEMBROS
+  ══════════════════════════════════════════════════════════════ */
+  function toggleMember(el, userId, display) {
+    if (!requireCard()) return;
+    el.classList.toggle('selected');
+    if (el.classList.contains('selected')) {
+      if (!activeMembers.find(m => m.id === userId)) activeMembers.push({ id: userId, display });
+    } else {
+      activeMembers = activeMembers.filter(m => m.id !== userId);
+    }
+    updateCardMembers();
+    kpost('cartao_membro', currentCardId, { user_id: userId });
+  }
+  /* Reflete os membros atuais nos avatares do .kb-card do quadro */
+  function updateCardMembers() {
+    const card = _boardCard(); if (!card) return;
+    const meta = card.querySelector('.kb-card-meta'); if (!meta) return;
+    let avs = meta.querySelector('.kb-card-avs');
+    if (!activeMembers.length) { if (avs) avs.remove(); return; }
+    if (!avs) {
+      avs = document.createElement('div');
+      avs.className = 'kb-card-avs';
+      meta.appendChild(avs);
+    }
+    let html = activeMembers.slice(0, 3)
+      .map(m => `<span class="kb-card-av" title="${escHtml(m.display)}">${escHtml((m.display || '?')[0].toUpperCase())}</span>`)
+      .join('');
+    if (activeMembers.length > 3) html += `<span class="kb-card-av more">+${activeMembers.length - 3}</span>`;
+    avs.innerHTML = html;
+  }
+  function filterMembers(q) {
+    document.querySelectorAll('#memberList .member-row').forEach(row => {
+      row.style.display = row.querySelector('.member-row-name')
+        .textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     CALENDÁRIO
+  ══════════════════════════════════════════════════════════════ */
+  function buildCal() {
+    const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    document.getElementById('calMonthLabel').textContent = meses[calDate.getMonth()] + ' ' + calDate.getFullYear();
+    const first = new Date(calDate.getFullYear(), calDate.getMonth(), 1).getDay();
+    const dias  = new Date(calDate.getFullYear(), calDate.getMonth()+1, 0).getDate();
+    const hoje  = new Date();
+    let html = '<tr>';
+    ['dom','seg','ter','qua','qui','sex','sáb'].forEach(d => html += `<th>${d}</th>`);
+    html += '</tr><tr>';
+    let d = 1;
+    for (let i = 0; i < 42; i++) {
+      const col = i % 7;
+      if (i < first || d > dias) {
+        html += '<td></td>';
+      } else {
+        const t = hoje.getDate()===d && hoje.getMonth()===calDate.getMonth() && hoje.getFullYear()===calDate.getFullYear();
+        html += `<td><div class="cal-day${t?' today':''}" onclick="selectDay(${d})">${d}</div></td>`;
+        d++;
+      }
+      if (col === 6 && d <= dias) html += '</tr><tr>';
+    }
+    document.getElementById('calGrid').innerHTML = html + '</tr>';
+  }
+  function changeMonth(dir) { calDate = new Date(calDate.getFullYear(), calDate.getMonth()+dir, 1); buildCal(); }
+  function selectDay(d) {
+    document.querySelectorAll('.cal-day').forEach(el => el.classList.remove('selected'));
+    event.target.classList.add('selected');
+    const mm = String(calDate.getMonth()+1).padStart(2,'0');
+    document.getElementById('dateEnd').value = `${calDate.getFullYear()}-${mm}-${String(d).padStart(2,'0')}`;
+  }
+  function saveDates() {
+    closePopover('popDatas');
+    if (!requireCard()) return;
+    const inicio  = document.getElementById('dateStart').value || '';
+    const entrega = document.getElementById('dateEnd').value   || '';
+    updateCardDate(entrega);
+    kpost('cartao_atualizar', currentCardId, { data_inicio: inicio, data_entrega: entrega });
+  }
+  /* Reflete a data de entrega no .kb-card do quadro (badge d/m + atraso) */
+  function updateCardDate(entrega) {
+    const card = _boardCard(); if (!card) return;
+    const left = card.querySelector('.kb-card-meta-left'); if (!left) return;
+    let badge = left.querySelector('.kb-card-date');
+    if (!entrega) { if (badge) badge.remove(); return; }
+    const [y, m, d] = entrega.split('-');
+    const atrasado = new Date(entrega + 'T23:59:59') < new Date()
+                     && !document.getElementById('titleCircle').classList.contains('done');
+    if (!badge) {
+      badge = document.createElement('span');
+      left.appendChild(badge);
+    }
+    badge.className = 'kb-card-date' + (atrasado ? ' atrasado' : '');
+    badge.innerHTML =
+      '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>'
+      + `${d}/${m}`;
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     CAPA / CONCLUÍDO / MOVER
+  ══════════════════════════════════════════════════════════════ */
+  function setCover(color) {
+    const cover = document.getElementById('modalCover');
+    if (color) { cover.style.height = '80px'; cover.style.background = color; }
+    else       { cover.style.height = '0';    cover.style.background = ''; }
+    closePopover('popCapa');
+    if (!requireCard()) return;
+    kpost('cartao_atualizar', currentCardId, { capa_cor: color || '' });
+  }
+  function toggleDone() {
+    if (!requireCard()) return;
+    const circle = document.getElementById('titleCircle');
+    circle.classList.toggle('done');
+    const val = circle.classList.contains('done') ? '1' : '0';
+    kpost('cartao_atualizar', currentCardId, { concluido: val });
+  }
+  // HTML de placeholder para coluna que ficou vazia (mesmo do drag & drop / _onDrop)
+  const _KB_EMPTY_HTML = `<div class="kb-empty">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg>
+    Sem cards nesta coluna</div>`;
+
+  // Atualiza o contador (.kb-badge) de uma coluna a partir do seu .kb-col-body
+  function _kbUpdateCount(body) {
+    if (!body) return;
+    const badge = body.closest('.kb-col').querySelector('.kb-badge');
+    if (badge) badge.textContent = body.querySelectorAll('.kb-card').length;
+  }
+
+  function moveCard() {
+    if (!requireCard()) { closePopover('popMover'); return; }
+    const sel    = document.getElementById('moveListSelect');
+    if (!sel) return;
+    const listaId = sel.value;
+    const opt    = sel.options[sel.selectedIndex];
+    const cor    = opt.dataset.cor || '#6b7280';
+    document.getElementById('statusLabel').textContent     = opt.text;
+    document.getElementById('statusDot').style.background  = cor;
+    closePopover('popMover');
+    if (!currentCardId || !listaId) return;
+
+    // Move o card no DOM (mesma lógica do _onDrop) em vez de recarregar a página
+    const cardEl   = document.querySelector(`.kb-card[data-card-id="${currentCardId}"]`);
+    const destBody = document.querySelector(`.kb-col-body[data-lista-id="${listaId}"]`);
+    if (cardEl && destBody) {
+      const srcBody = cardEl.closest('.kb-col-body');
+      if (srcBody !== destBody) {
+        // 1. Move o elemento para o topo da coluna de destino
+        destBody.querySelectorAll('.kb-empty').forEach(el => el.remove());
+        destBody.insertBefore(cardEl, destBody.firstChild);
+        cardEl.dataset.listaId = listaId;
+        currentListaId = Number(listaId) || null;
+
+        // 2. Restaura "coluna vazia" na origem, se necessário
+        if (srcBody && !srcBody.querySelector('.kb-card')) srcBody.innerHTML = _KB_EMPTY_HTML;
+
+        // 3. Atualiza contadores das duas colunas
+        _kbUpdateCount(srcBody);
+        _kbUpdateCount(destBody);
+
+        // 4. Atualiza a cor da barra lateral do card
+        const bar = cardEl.querySelector('.kb-card-bar');
+        if (bar) bar.style.background = cor;
+      }
+    }
+
+    // 5. Persiste no backend
+    kpost('cartao_mover', currentCardId, { lista_id: listaId, posicao: 0 });
+  }
+
+  function excluirCartao() {
+    if (!currentCardId) return;
+    const cid = currentCardId;
+    GModal.confirm(
+      'Excluir cartão',
+      'Esta ação é permanente e não pode ser desfeita. Deseja excluir este cartão?',
+      async () => {
+        const r = await kpost('cartao_excluir', cid);
+        if (!r || !r.ok) {
+          GModal.alert('Erro ao excluir', 'Não foi possível excluir o cartão. Tente novamente.');
+          return;
+        }
+        // Remove o .kb-card do DOM e atualiza o contador da coluna
+        const cardEl = document.querySelector(`.kb-card[data-card-id="${cid}"]`);
+        if (cardEl) {
+          const body = cardEl.closest('.kb-col-body');
+          cardEl.remove();
+          if (body && !body.querySelector('.kb-card')) body.innerHTML = _KB_EMPTY_HTML;
+          _kbUpdateCount(body);
+        }
+        closeModal();
+      },
+      'Excluir'
+    );
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     CHECKLIST
+  ══════════════════════════════════════════════════════════════ */
+  async function addChecklistSection() {
+    if (!requireCard()) return;
+    const input = document.getElementById('checklistTitleInput');
+    const title = (input ? input.value : '').trim() || 'Checklist';
+    const r = await kpost('checklist_criar', currentCardId, { titulo: title });
+    if (!r || !r.ok || !r.id) { GModal.alert('Erro', 'Não foi possível criar a checklist.'); return; }
+    checklists.push({ id: r.id, title, items: [] });
+    if (input) input.value = 'Checklist';
+    closePopover('popChecklist');
+    renderChecklists();
+  }
+  async function addCheckItem(clId) {
+    if (!requireCard()) return;
+    const input = document.getElementById('ci-input-' + clId);
+    if (!input) return;
+    const t = input.value.trim(); if (!t) return;
+    const cl = checklists.find(c => c.id === clId);
+    if (!cl) return;
+    const r = await kpost('checklist_item_criar', clId, { texto: t });
+    if (!r || !r.ok || !r.id) { GModal.alert('Erro', 'Não foi possível adicionar o item.'); return; }
+    cl.items.push({ text: t, done: false, itemId: r.id });
+    input.value = '';
+    renderChecklists();
+  }
+  function toggleCheckItem(clId, itemId) {
+    if (!requireCard()) return;
+    const cl = checklists.find(c => c.id === clId); if (!cl) return;
+    const it = cl.items.find(i => i.itemId === itemId); if (!it) return;
+    it.done = !it.done;
+    kpost('item_toggle', itemId);
+    renderChecklists();
+  }
+  function deleteCheckItem(clId, itemId) {
+    if (!requireCard()) return;
+    const cl = checklists.find(c => c.id === clId); if (!cl) return;
+    cl.items = cl.items.filter(i => i.itemId !== itemId);
+    kpost('item_excluir', itemId);
+    renderChecklists();
+  }
+  function deleteChecklist(id) {
+    if (!requireCard()) return;
+    checklists = checklists.filter(c => c.id !== id);
+    kpost('checklist_excluir', id);
+    renderChecklists();
+  }
+  function renderChecklists() {
+    const container = document.getElementById('checklistContainer');
+    if (!container) return;
+    container.innerHTML = checklists.map(cl => {
+      const done = cl.items.filter(i => i.done).length;
+      const pct  = cl.items.length ? Math.round(done / cl.items.length * 100) : 0;
+      return `
+        <div class="checklist-section">
+          <div class="checklist-title-row">
+            <div class="checklist-title-left">
+              <span class="checklist-title-name">${escHtml(cl.title)}</span>
+              <span class="checklist-pct-badge">${pct}%</span>
+            </div>
+            <button class="checklist-del-btn" onclick="deleteChecklist(${cl.id})">Excluir</button>
+          </div>
+          <div class="checklist-bar">
+            <div class="checklist-bar-fill" style="width:${pct}%"></div>
+          </div>
+          <div class="check-items">
+            ${cl.items.map(it => `
+              <div class="check-item">
+                <input type="checkbox" id="ci-${it.itemId}" ${it.done ? 'checked' : ''}
+                       onchange="toggleCheckItem(${cl.id},${it.itemId})">
+                <label for="ci-${it.itemId}" class="${it.done ? 'done-label' : ''}">${escHtml(it.text)}</label>
+                <button class="check-item-del" onclick="deleteCheckItem(${cl.id},${it.itemId})">×</button>
+              </div>`).join('')}
+          </div>
+          <div class="add-check-form">
+            <input class="add-check-input" id="ci-input-${cl.id}" placeholder="Adicionar item..."
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();addCheckItem(${cl.id})}">
+            <button class="add-check-btn" onclick="addCheckItem(${cl.id})">Adicionar</button>
+          </div>
+        </div>`;
+    }).join('') || '';
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     COMENTÁRIOS / ATIVIDADE
+  ══════════════════════════════════════════════════════════════ */
+  document.getElementById('commentInput').addEventListener('focus', () => {
+    document.getElementById('commentSubmitRow').style.display = 'flex';
+  });
+  function submitComment() {
+    const input = document.getElementById('commentInput');
+    if (!input) return;
+    const t = input.value.trim(); if (!t) return;
+    if (!requireCard()) return;
+    comments.unshift({ tipo: 'comentario', autor: _ME, texto: t, criado_em: 'agora' });
+    input.value = ''; input.style.minHeight = '';
+    const row = document.getElementById('commentSubmitRow');
+    if (row) row.style.display = 'none';
+    kpost('cartao_comentar', currentCardId, { texto: t });
+    renderFeed();
+  }
+  function renderFeed() {
+    const el = document.getElementById('activityFeed'); if (!el) return;
+    if (!comments.length) {
+      el.innerHTML = '<p style="font-size:12px;color:#9ca3af;padding:16px 0;text-align:center">Sem atividade ainda.</p>';
+      return;
+    }
+    el.innerHTML = comments.map(c => {
+      const initial = (c.autor || 'S')[0].toUpperCase();
+      if (c.tipo === 'comentario') return `
+        <div class="activity-item" style="flex-direction:column;gap:4px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="avatar xs" style="background:#2563eb">${initial}</div>
+            <span style="font-size:12px;font-weight:700">${escHtml(c.autor || '')}</span>
+            <span class="activity-time">${c.criado_em || ''}</span>
+          </div>
+          <div class="comment-item"><p class="comment-item-text">${escHtml(c.texto || '')}</p></div>
+        </div>`;
+      return `
+        <div class="activity-item">
+          <div class="avatar xs" style="background:#6b7280">${initial}</div>
+          <div>
+            <p class="activity-text"><strong>${escHtml(c.autor || '')}</strong> ${escHtml(c.texto || '')}</p>
+            <span class="activity-time">${c.criado_em || ''}</span>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  /* ── util ── */
+  function autoResize(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+
+  /* ── Prompt modal (substitui prompt() nativo) ── */
+  let _kbPromptResolve = null;
+
+  function _kbPromptOpen(title, label, placeholder, okLabel) {
+    return new Promise(resolve => {
+      _kbPromptResolve = resolve;
+      document.getElementById('kb-prompt-title').textContent = title;
+      document.getElementById('kb-prompt-label').textContent = label || '';
+      const inp = document.getElementById('kb-prompt-input');
+      inp.placeholder = placeholder || '';
+      inp.value = '';
+      document.getElementById('kb-prompt-ok').textContent = okLabel || 'Criar';
+      document.getElementById('kb-prompt-backdrop').classList.add('open');
+      setTimeout(() => inp.focus(), 60);
+    });
+  }
+  function _kbPromptSubmit() {
+    const val = document.getElementById('kb-prompt-input').value.trim();
+    if (!val) { document.getElementById('kb-prompt-input').focus(); return; }
+    document.getElementById('kb-prompt-backdrop').classList.remove('open');
+    if (_kbPromptResolve) { _kbPromptResolve(val); _kbPromptResolve = null; }
+  }
+  function _kbPromptClose() {
+    document.getElementById('kb-prompt-backdrop').classList.remove('open');
+    if (_kbPromptResolve) { _kbPromptResolve(null); _kbPromptResolve = null; }
+  }
+  document.getElementById('kb-prompt-ok').addEventListener('click', _kbPromptSubmit);
+
+  /* ── Quick-add e nova coluna ── */
+  async function quickAdd(listaId, listaNome) {
+    const titulo = await _kbPromptOpen(
+      `Novo card em "${listaNome}"`, 'Título do card', 'Ex: Revisar documentação', 'Criar card'
+    );
+    if (!titulo) return;
+    const r = await kpost('cartao_criar', null, { lista_id: listaId, titulo });
+    if (r && r.ok) location.reload();
+  }
+  async function addColumn() {
+    const name = await _kbPromptOpen(
+      'Nova coluna', 'Nome da coluna', 'Ex: Em andamento', 'Criar coluna'
+    );
+    if (!name) return;
+    const r = await kpost('lista_criar', null, { nome: name });
+    if (r && r.ok) location.reload();
+  }
+
+  /* ── Quadro ── */
+  function toggleQuadroMenu() {
+    const m = document.getElementById('quadroMenu');
+    m.style.display = m.style.display === 'none' ? 'block' : 'none';
+  }
+  function openQuadroModal() {
+    document.getElementById('quadroMenu').style.display = 'none';
+    document.getElementById('quadroOverlay').classList.add('open');
+    setTimeout(() => document.getElementById('quadroNomeInput').focus(), 60);
+  }
+  function closeQuadroModal() {
+    document.getElementById('quadroOverlay').classList.remove('open');
+    document.getElementById('quadroNomeInput').value = '';
+  }
+
+  /* ── Drag & Drop ── */
+  let _dragId  = null;   // pk do card sendo arrastado
+  let _dragSrc = null;   // data-lista-id de origem
+  let _ghost   = null;   // elemento placeholder visual
+
+  function initDragDrop() {
+    document.querySelectorAll('.kb-card').forEach(card => {
+      card.addEventListener('dragstart', _onDragStart);
+      card.addEventListener('dragend',   _onDragEnd);
+    });
+    document.querySelectorAll('.kb-col-body').forEach(body => {
+      body.addEventListener('dragover',  _onDragOver);
+      body.addEventListener('dragleave', _onDragLeave);
+      body.addEventListener('drop',      _onDrop);
+    });
+  }
+
+  function _onDragStart(e) {
+    _dragId  = this.dataset.cardId;
+    _dragSrc = this.dataset.listaId;
+    this.classList.add('kb-dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', _dragId);
+  }
+
+  function _onDragEnd() {
+    this.classList.remove('kb-dragging');
+    document.querySelectorAll('.kb-col-body').forEach(b => b.classList.remove('kb-drag-over'));
+    document.querySelectorAll('.kb-drop-ghost').forEach(g => g.remove());
+    _ghost = null;
+  }
+
+  function _onDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    this.classList.add('kb-drag-over');
+    // Insere placeholder se ainda não existe nessa coluna
+    if (!this.querySelector('.kb-drop-ghost')) {
+      _ghost = document.createElement('div');
+      _ghost.className = 'kb-drop-ghost';
+      this.querySelectorAll('.kb-empty').length
+        ? this.appendChild(_ghost)
+        : this.insertBefore(_ghost, this.firstChild);
+    }
+  }
+
+  function _onDragLeave(e) {
+    if (!this.contains(e.relatedTarget)) {
+      this.classList.remove('kb-drag-over');
+      this.querySelectorAll('.kb-drop-ghost').forEach(g => g.remove());
+    }
+  }
+
+  async function _onDrop(e) {
+    e.preventDefault();
+    const body   = this;
+    const destId = body.dataset.listaId;
+    body.classList.remove('kb-drag-over');
+    body.querySelectorAll('.kb-drop-ghost').forEach(g => g.remove());
+
+    if (!_dragId || destId === _dragSrc) return;
+
+    const cardEl  = document.querySelector(`.kb-card[data-card-id="${_dragId}"]`);
+    const srcBody = document.querySelector(`.kb-col-body[data-lista-id="${_dragSrc}"]`);
+    if (!cardEl || !srcBody) return;
+
+    // 1. Move o elemento no DOM
+    body.querySelectorAll('.kb-empty').forEach(el => el.remove());
+    body.insertBefore(cardEl, body.firstChild);
+    cardEl.dataset.listaId = destId;
+
+    // 2. Atualiza lista de origem — restaura "vazia" se necessário
+    if (!srcBody.querySelector('.kb-card')) {
+      srcBody.innerHTML = `<div class="kb-empty">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg>
+        Sem cards nesta coluna</div>`;
+    }
+
+    // 3. Atualiza contadores das duas colunas
+    [srcBody, body].forEach(b => {
+      const badge = b.closest('.kb-col').querySelector('.kb-badge');
+      if (badge) badge.textContent = b.querySelectorAll('.kb-card').length;
+    });
+
+    // 4. Atualiza cor da barra lateral do card
+    const destCor = body.closest('.kb-col').querySelector('.kb-col-accent').style.background;
+    const bar = cardEl.querySelector('.kb-card-bar');
+    if (bar && destCor) bar.style.background = destCor;
+
+    // 5. Persiste no backend
+    _dragSrc = destId;
+    await kpost('cartao_mover', _dragId, { lista_id: destId, posicao: 0 });
+  }
+
+  // Inicializa ao carregar
+  initDragDrop();
+
+  /* ── Keyboard / click-outside ── */
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeModal();
+      closeQuadroModal();
+      document.getElementById('quadroMenu').style.display = 'none';
+    }
+  });
+  document.addEventListener('click', e => {
+    const menu = document.getElementById('quadroMenu');
+    if (menu && !menu.contains(e.target) && !e.target.closest('[onclick="toggleQuadroMenu()"]')) {
+      menu.style.display = 'none';
+    }
+    // Fecha o popover aberto ao clicar fora dele (e fora do gatilho que o abre)
+    if (openPop && !openPop.contains(e.target) && !e.target.closest('[onclick*="kbTogglePopover"]')) {
+      openPop.classList.remove('open');
+      openPop = null;
+      _kbSyncActive();
+    }
+  });
+
+  /* ── Blindagem: um erro em um handler não pode derrubar os demais ──
+     Reembrulha as funções chamadas via onclick inline com try/catch. */
+  [
+    'openModal','moveCard','toggleDone','setCover','saveDates','submitComment',
+    'excluirCartao','addChecklistSection','addCheckItem','toggleCheckItem',
+    'deleteCheckItem','deleteChecklist','toggleLabel','toggleMember','kbTogglePopover',
+    'closePopover','changeMonth','selectDay','filterLabels','filterMembers'
+  ].forEach(name => {
+    const orig = window[name];
+    if (typeof orig === 'function') window[name] = safe(orig);
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Editar Item — {{ item.nome }}{% endblock %}
+{% block topbar %}{% endblock %}
+
+{% block content %}
+
+{# ── Cabeçalho ── #}
+<div class="page-header">
+  <div>
+    <div class="page-breadcrumb">
+      <a href="{% url 'core:cad_itens_estoque' %}" style="color:inherit;text-decoration:none">Cadastros › Itens de Estoque</a> › Editar
+    </div>
+    <h1>Editar Item</h1>
+    <p class="page-subtitle">{{ item.sku }} — {{ item.nome }}</p>
+  </div>
+  <div style="align-self:center">
+    <a href="{% url 'core:cad_itens_estoque' %}" class="btn-link">← Voltar</a>
+  </div>
+</div>
+
+{# ── Card de edição ── #}
+<div class="es-card">
+  <div class="es-card-head">
+    <div id="es-avatar" class="es-avatar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+        <path d="M3 7l9-4 9 4-9 4-9-4z"/>
+        <path d="M3 7v10l9 4 9-4V7"/>
+        <path d="M12 11v10"/>
+      </svg>
+    </div>
+    <div>
+      <div id="es-title" class="es-card-title">{{ item.nome }}</div>
+      <span id="es-status-tag" class="es-status-tag">—</span>
+    </div>
+  </div>
+
+  <form method="post" id="es-form">
+    {% csrf_token %}
+
+    {# ── Seção 1: Identificação ── #}
+    <div class="es-section">
+      <div class="es-section-title">
+        <span class="es-section-num">1</span> Identificação
+      </div>
+      <div class="es-grid">
+        <div class="fg{% if form.sku.errors %} has-error{% endif %}">
+          <label for="{{ form.sku.id_for_label }}">SKU <span class="req">*</span></label>
+          {{ form.sku }}
+          {% for e in form.sku.errors %}<span class="es-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.nome.errors %} has-error{% endif %}">
+          <label for="{{ form.nome.id_for_label }}">Nome <span class="req">*</span></label>
+          {{ form.nome }}
+          {% for e in form.nome.errors %}<span class="es-error">{{ e }}</span>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# ── Seção 2: Unidade & estoque ── #}
+    <div class="es-section">
+      <div class="es-section-title">
+        <span class="es-section-num">2</span> Unidade &amp; estoque
+      </div>
+      <div class="es-grid">
+        <div class="fg{% if form.unidade.errors %} has-error{% endif %}">
+          <label for="{{ form.unidade.id_for_label }}">Unidade <span class="req">*</span></label>
+          {{ form.unidade }}
+          {% for e in form.unidade.errors %}<span class="es-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.nivel_minimo.errors %} has-error{% endif %}">
+          <label for="{{ form.nivel_minimo.id_for_label }}">Nível mínimo <span class="req">*</span></label>
+          <div class="es-input-with-suffix">
+            {{ form.nivel_minimo }}
+            <span class="es-unit-suffix">—</span>
+          </div>
+          {% for e in form.nivel_minimo.errors %}<span class="es-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.qtde.errors %} has-error{% endif %}">
+          <label for="{{ form.qtde.id_for_label }}">Quantidade atual <span class="req">*</span></label>
+          <div class="es-input-with-suffix">
+            {{ form.qtde }}
+            <span class="es-unit-suffix">—</span>
+          </div>
+          {% for e in form.qtde.errors %}<span class="es-error">{{ e }}</span>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {% if form.non_field_errors %}
+      <div class="es-section" style="padding-top:0">
+        {% for e in form.non_field_errors %}<span class="es-error">{{ e }}</span>{% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="es-form-footer">
+      <span class="es-required-note">* Campos obrigatórios</span>
+      <div class="es-form-actions">
+        <a href="{% url 'core:cad_itens_estoque' %}" class="btn-link">Cancelar</a>
+        <button type="submit" class="btn">Atualizar item</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/estoque.js' %}" defer></script>
+{% endblock %}

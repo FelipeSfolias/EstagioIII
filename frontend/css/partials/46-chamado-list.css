@@ -1,0 +1,523 @@
+/* ── Chamado List (cl-*) ── */
+
+/* Sub-navegação */
+.cl-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  padding: 0 24px;
+  position: sticky;
+  top: 56px;
+  z-index: 80;
+}
+
+.cl-nav-item { position: relative; }
+
+.cl-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  height: 44px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  transition: color .15s, border-color .15s;
+}
+.cl-nav-btn:hover,
+.cl-nav-item:hover .cl-nav-btn,
+.cl-nav-btn.active {
+  color: var(--blue);
+  border-bottom-color: var(--blue);
+}
+
+.cl-nav-ico {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  opacity: .85;
+}
+
+.cl-nav-chevron {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  transition: transform .2s;
+}
+.cl-nav-item:hover .cl-nav-chevron { transform: rotate(180deg); }
+
+/* Dropdown */
+.cl-dropdown {
+  position: absolute;
+  top: calc(100% + 1px);
+  left: 0;
+  min-width: 200px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.1);
+  padding: 6px 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-6px);
+  transition: opacity .15s, transform .15s;
+  z-index: 200;
+}
+.cl-nav-item:hover .cl-dropdown {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateY(0);
+}
+
+.cl-dd-section {
+  padding: 4px 0;
+  border-bottom: 1px solid var(--line);
+}
+.cl-dd-section:last-child { border-bottom: none; }
+
+.cl-dd-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 14px;
+  text-decoration: none;
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: background .12s;
+}
+.cl-dd-row:hover { background: var(--bg); }
+
+.cl-dd-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--orange);
+}
+.cl-dd-count.zero { color: var(--muted); }
+
+/* Botão Novo Chamado */
+.cl-btn-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 7px;
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background .15s;
+  white-space: nowrap;
+}
+.cl-btn-new:hover { background: #1d4ed8; }
+
+/* ── Barra de filtros (Variação B) ── */
+.cl-fbar {
+  padding: 14px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.cl-fbar-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+.cl-fbar-spacer { flex: 1; }
+.cl-fbar-divider { width: 1px; height: 22px; background: var(--line); }
+
+/* Busca */
+.cl-fsearch {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  overflow: hidden;
+  flex: 1;
+  min-width: 220px;
+  max-width: 360px;
+}
+.cl-fsearch input {
+  border: none;
+  outline: none;
+  padding: 8px 12px;
+  font-size: 13px;
+  background: transparent;
+  flex: 1;
+  color: var(--text);
+}
+.cl-fsearch input::placeholder { color: var(--muted); }
+.cl-fsearch-ico {
+  padding: 0 4px 0 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+}
+.cl-fsearch:focus-within {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+}
+
+/* Pills de dropdown */
+.cl-filter-dd { position: relative; }
+.cl-filter-dd-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color .12s, background .12s, color .12s;
+}
+.cl-filter-dd-btn:hover { border-color: #cdd3dd; color: var(--text); }
+.cl-filter-dd-btn .lbl { color: var(--muted); }
+.cl-filter-dd-btn .val { color: var(--text); font-weight: 700; }
+.cl-filter-dd-btn.has-value {
+  border-color: var(--blue);
+  background: var(--blue-light);
+  color: var(--blue);
+}
+.cl-filter-dd-btn.has-value .lbl,
+.cl-filter-dd-btn.has-value .val { color: var(--blue); }
+.cl-filter-chev {
+  width: 11px;
+  height: 11px;
+  opacity: .55;
+  transition: transform .15s;
+}
+.cl-filter-dd.open .cl-filter-chev { transform: rotate(180deg); }
+
+.cl-filter-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 210px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  padding: 5px;
+  z-index: 300;
+  display: none;
+}
+.cl-filter-dd.open .cl-filter-menu { display: block; }
+.cl-filter-menu-head {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 6px 10px 4px;
+}
+.cl-filter-opt {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--text);
+  cursor: pointer;
+  text-decoration: none;
+}
+.cl-filter-opt:hover { background: var(--bg); }
+.cl-filter-opt.sel { color: var(--blue); font-weight: 700; }
+.cl-filter-opt .ck {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  border-radius: 3px;
+}
+.cl-filter-opt.sel .ck {
+  background: var(--blue);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3.2 3.2L13 4.5' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3.2 3.2L13 4.5' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+.cl-filter-opt .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.cl-filter-opt .opt-count {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+/* Botões de ação em massa */
+.cl-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  cursor: pointer;
+  color: var(--muted);
+  transition: background .15s, color .15s, border-color .15s;
+}
+.cl-icon-btn:hover { background: var(--bg); color: var(--text); }
+.cl-icon-btn.danger { color: var(--red); }
+.cl-icon-btn.danger:hover {
+  color: var(--red);
+  border-color: #f3c4c4;
+  background: var(--red-light);
+}
+
+/* Toolbar legada (ainda usada em chamados/meus.html) */
+.cl-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+}
+.cl-toolbar-search {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  overflow: hidden;
+  flex: 1;
+  max-width: 400px;
+}
+.cl-toolbar-search input {
+  border: none;
+  outline: none;
+  padding: 7px 12px;
+  font-size: 13px;
+  color: var(--text);
+  background: transparent;
+  flex: 1;
+}
+.cl-search-btn {
+  border: none;
+  background: transparent;
+  padding: 7px 12px;
+  cursor: pointer;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+}
+.cl-search-btn:hover { color: var(--blue); }
+
+/* Cabeçalho da seção */
+.cl-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 24px 10px;
+}
+
+.cl-section-refresh {
+  color: var(--blue);
+  cursor: pointer;
+  font-size: 15px;
+  opacity: .7;
+}
+.cl-section-refresh:hover { opacity: 1; }
+
+.cl-section-title {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -.4px;
+}
+
+.cl-section-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* Tabela */
+.cl-table-wrap {
+  margin: 0 24px 24px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.07);
+  overflow: hidden;
+}
+.cl-table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.cl-table-wrap thead tr {
+  border-bottom: 2px solid var(--line);
+  background: #f8f9fb;
+}
+.cl-table-wrap th {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.cl-th-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: inherit;
+  text-decoration: none;
+}
+.cl-th-link:hover { color: var(--blue); }
+
+.cl-table-wrap td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--text);
+  vertical-align: middle;
+}
+.cl-table-wrap tbody tr:last-child td { border-bottom: none; }
+.cl-table-wrap tbody tr {
+  cursor: pointer;
+  transition: background .1s;
+}
+.cl-table-wrap tbody tr:hover td { background: #f5f7ff; }
+.cl-table-wrap tbody tr.selected td { background: var(--blue-light); }
+
+.cl-col-check { width: 36px; }
+.cl-col-id    { width: 90px; }
+.cl-col-data  { width: 155px; }
+.cl-col-usuario { width: 160px; }
+.cl-col-prio    { width: 110px; }
+.cl-col-agente  { width: 150px; }
+
+.cl-ticket-id {
+  font-weight: 700;
+  color: var(--blue);
+  font-size: 12.5px;
+  text-decoration: none;
+}
+.cl-ticket-id:hover { text-decoration: underline; }
+
+.cl-ticket-assunto {
+  font-weight: 500;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+
+.cl-ticket-origem {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.cl-resp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+
+/* Paginação */
+.cl-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  background: #fafbfc;
+}
+
+.cl-page-info { font-size: 12px; color: var(--muted); }
+
+.cl-page-btns { display: flex; gap: 4px; }
+
+.cl-page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--muted);
+  text-decoration: none;
+  transition: background .12s;
+}
+.cl-page-btn:hover { background: var(--bg); }
+.cl-page-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+.cl-page-btn.disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+
+/* Responsivo */
+
+/* Telas médias: a busca ocupa a linha inteira e as pills de filtro
+   quebram livremente logo abaixo, garantindo que nenhum filtro seja cortado. */
+@media (max-width: 1100px) {
+  .cl-fsearch {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+  /* O espaçador deixa de empurrar os ícones para fora da tela: eles
+     passam a acompanhar as pills na quebra de linha. */
+  .cl-fbar-spacer { flex-basis: 100%; height: 0; }
+  .cl-fbar-divider { display: none; }
+}
+
+@media (max-width: 800px) {
+  .cl-col-usuario,
+  .cl-col-agente { display: none; }
+  .cl-table-wrap { margin: 0 12px 16px; }
+  .cl-fbar,
+  .cl-section-header { padding-left: 12px; padding-right: 12px; }
+  .cl-nav { padding: 0 12px; }
+}
+
+/* Telas estreitas: cada pill de filtro cresce para preencher a linha,
+   acomodando pares por linha sem nunca sumir. */
+@media (max-width: 560px) {
+  .cl-filter-dd,
+  .cl-filter-dd-btn { flex: 1 1 auto; }
+  .cl-filter-dd-btn { justify-content: space-between; width: 100%; }
+  .cl-nav { padding: 0 12px; }
+  .cl-nav-btn { padding: 0 10px; }
+  /* O "Novo Chamado" deixa de empurrar a barra: alinha à esquerda na quebra. */
+  .cl-nav > div[style*="margin-left:auto"] { margin-left: 0 !important; }
+}

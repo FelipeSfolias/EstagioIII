@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Indicadores de Chamados{% endblock %}
+
+{% block content %}
+<div class="ind">
+
+  <!-- ── Barra de Filtro de Período ── -->
+  <div class="ind-filter-bar">
+    <form method="get" action="" class="ind-filter-form">
+      <span class="ind-filter-label">Período</span>
+      <div class="ind-filter-field">
+        <label class="ind-filter-sublabel">De</label>
+        <input type="date" name="inicio" value="{{ inicio }}" class="input-lite ind-date-input">
+      </div>
+      <div class="ind-filter-field">
+        <label class="ind-filter-sublabel">Até</label>
+        <input type="date" name="fim" value="{{ fim }}" class="input-lite ind-date-input">
+      </div>
+      <button type="submit" class="btn">Filtrar</button>
+    </form>
+    <a href="?limpar=1" class="ind-filter-reset" title="Voltar para o mês atual">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+        <path d="M13 8A5 5 0 1 1 8 3v2l3-3-3-3v2A7 7 0 1 0 15 8h-2z" fill="currentColor"/>
+      </svg>
+      Mês atual
+    </a>
+  </div>
+
+  <!-- ── KPI Row ── -->
+  <div class="kpi-row">
+
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-card-header">
+        <span class="kpi-card-header-label">Total de Chamados</span>
+        <span class="kpi-card-header-dot"></span>
+      </div>
+      <div class="kpi-card-body">
+        <div class="kpi-total">{{ kpi.total }}</div>
+        <div class="kpi-subs">
+          <div class="kpi-sub sub-blue">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Aberto</span>
+            <span class="kpi-sub-value">{{ kpi.aberto }}</span>
+          </div>
+          <div class="kpi-sub sub-yellow">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Em atend.</span>
+            <span class="kpi-sub-value">{{ kpi.em_atendimento }}</span>
+          </div>
+          <div class="kpi-sub sub-green">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Resolvido</span>
+            <span class="kpi-sub-value">{{ kpi.resolvido }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-orange">
+      <div class="kpi-card-header">
+        <span class="kpi-card-header-label">Por Prioridade</span>
+        <span class="kpi-card-header-dot"></span>
+      </div>
+      <div class="kpi-card-body">
+        <div class="kpi-total">{{ kpi.total }}</div>
+        <div class="kpi-subs">
+          <div class="kpi-sub sub-red">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Alta</span>
+            <span class="kpi-sub-value">{{ kpi.prioridade_alta }}</span>
+          </div>
+          <div class="kpi-sub sub-yellow">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Média</span>
+            <span class="kpi-sub-value">{{ kpi.prioridade_media }}</span>
+          </div>
+          <div class="kpi-sub sub-green">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Baixa</span>
+            <span class="kpi-sub-value">{{ kpi.prioridade_baixa }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-green">
+      <div class="kpi-card-header">
+        <span class="kpi-card-header-label">Resolvidos</span>
+        <span class="kpi-card-header-dot"></span>
+      </div>
+      <div class="kpi-card-body">
+        <div class="kpi-total">{{ kpi.resolvido }}</div>
+        <div class="kpi-subs">
+          <div class="kpi-sub sub-green">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Dentro SLA</span>
+            <span class="kpi-sub-value">{{ kpi.dentro_sla }}</span>
+          </div>
+          <div class="kpi-sub sub-red">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Fora SLA</span>
+            <span class="kpi-sub-value">{{ kpi.fora_sla }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-purple">
+      <div class="kpi-card-header">
+        <span class="kpi-card-header-label">Pendentes</span>
+        <span class="kpi-card-header-dot"></span>
+      </div>
+      <div class="kpi-card-body">
+        <div class="kpi-total">{{ kpi.pendentes }}</div>
+        <div class="kpi-subs">
+          <div class="kpi-sub sub-blue">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Aberto</span>
+            <span class="kpi-sub-value">{{ kpi.aberto }}</span>
+          </div>
+          <div class="kpi-sub sub-yellow">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Em atend.</span>
+            <span class="kpi-sub-value">{{ kpi.em_atendimento }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /kpi-row -->
+
+  <!-- ── Donuts ── -->
+  <div class="charts-row">
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Por Tipo (Origem)</span>
+        <span class="card-badge">{{ kpi.total }} total</span>
+      </div>
+      <div class="card-body">
+        <div class="donut-wrap">
+          <div class="donut-canvas-wrap">
+            <canvas id="chartTipo" width="130" height="130"></canvas>
+            <div class="donut-center">
+              <span class="donut-center-num">{{ kpi.total }}</span>
+              <span class="donut-center-label">chamados</span>
+            </div>
+          </div>
+          <div class="donut-legend">
+            {% for tipo in por_tipo %}
+            <div class="legend-item">
+              <span class="legend-dot" style="background:{{ tipo.cor }}"></span>
+              <span class="legend-text">{{ tipo.nome }}</span>
+              <span class="legend-pct">{{ tipo.percentual|floatformat:1 }}%</span>
+              <span class="legend-value">{{ tipo.total }}</span>
+            </div>
+            {% empty %}
+            <p style="color:var(--muted);font-size:12px;">Sem dados no período.</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Conclusão</span>
+        <span class="card-badge">{{ kpi.total }} total</span>
+      </div>
+      <div class="card-body">
+        <div class="donut-wrap">
+          <div class="donut-canvas-wrap">
+            <canvas id="chartConclusao" width="130" height="130"></canvas>
+            <div class="donut-center">
+              <span class="donut-center-num">{{ kpi.total }}</span>
+              <span class="donut-center-label">chamados</span>
+            </div>
+          </div>
+          <div class="donut-legend">
+            <div class="legend-item">
+              <span class="legend-dot" style="background:#16a34a"></span>
+              <span class="legend-text">Concluídos</span>
+              <span class="legend-pct">{{ conclusao.pct_concluidos|floatformat:1 }}%</span>
+              <span class="legend-value">{{ conclusao.concluidos }}</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot" style="background:#dc2626"></span>
+              <span class="legend-text">Não concluídos</span>
+              <span class="legend-pct">{{ conclusao.pct_nao_concluidos|floatformat:1 }}%</span>
+              <span class="legend-value">{{ conclusao.nao_concluidos }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /charts-row -->
+
+  <!-- ── Gráfico de Linha ── -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Chamados Criados vs Resolvidos <span style="font-weight:400;color:var(--muted);font-size:12px;">({{ periodo_label }})</span></span>
+      <div style="display:flex;gap:16px;align-items:center;">
+        <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);">
+          <span style="display:inline-block;width:18px;height:2px;background:#f43f5e;border-radius:2px;"></span>
+          Criados
+        </span>
+        <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);">
+          <span style="display:inline-block;width:18px;height:2px;background:#2563eb;border-radius:2px;"></span>
+          Resolvidos
+        </span>
+      </div>
+    </div>
+    <div class="card-body">
+      <canvas id="chartLine" height="80"></canvas>
+    </div>
+  </div>
+
+  <!-- ── Tabelas ── -->
+  <div class="tables-row">
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Por Origem</span>
+        <span class="card-badge">{{ kpi.resolvido }} resolvidos</span>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Origem</th>
+              <th style="text-align:right;">Pendentes</th>
+              <th style="text-align:right;">Resolvidos</th>
+              <th style="text-align:right;">%</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for equipe in por_equipe %}
+            <tr>
+              <td style="font-weight:600;">{{ equipe.nome }}</td>
+              <td style="text-align:right;">{{ equipe.pendentes }}</td>
+              <td style="text-align:right;">{{ equipe.resolvidos }}</td>
+              <td style="text-align:right;">
+                <span class="ind-badge {% if equipe.percentual >= 95 %}ind-badge-green{% elif equipe.percentual >= 80 %}ind-badge-orange{% else %}ind-badge-red{% endif %}">
+                  {{ equipe.percentual|floatformat:1 }}%
+                </span>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" style="text-align:center;color:var(--muted);">Sem dados no período.</td></tr>
+            {% endfor %}
+            {% if por_equipe %}
+            <tr class="total-row">
+              <td style="font-weight:700;">Total</td>
+              <td style="text-align:right;font-weight:700;">{{ totais_equipe.pendentes }}</td>
+              <td style="text-align:right;font-weight:700;">{{ totais_equipe.resolvidos }}</td>
+              <td style="text-align:right;">
+                <span class="ind-badge ind-badge-green">{{ totais_equipe.percentual|floatformat:1 }}%</span>
+              </td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Por Colaborador</span>
+        <span class="card-badge">{{ por_colaborador|length }} agentes</span>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Colaborador</th>
+              <th style="text-align:right;">Pendentes</th>
+              <th style="text-align:right;">Resolvidos</th>
+              <th style="text-align:right;">% Conc.</th>
+              <th style="text-align:right;">% SLA</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for colab in por_colaborador %}
+            <tr>
+              <td>{{ colab.nome }}</td>
+              <td style="text-align:right;">{{ colab.pendentes }}</td>
+              <td style="text-align:right;">{{ colab.resolvidos }}</td>
+              <td style="text-align:right;font-weight:600;
+                color:{% if colab.pct_conclusao >= 95 %}var(--green){% elif colab.pct_conclusao >= 80 %}var(--orange){% else %}var(--red){% endif %};">
+                {{ colab.pct_conclusao|floatformat:1 }}%
+              </td>
+              <td style="text-align:right;font-weight:600;
+                color:{% if colab.pct_sla >= 90 %}var(--green){% elif colab.pct_sla >= 70 %}var(--orange){% else %}var(--red){% endif %};">
+                {{ colab.pct_sla|floatformat:1 }}%
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" style="text-align:center;color:var(--muted);">Sem agentes com chamados no período.</td></tr>
+            {% endfor %}
+            {% if por_colaborador %}
+            <tr class="total-row">
+              <td style="font-weight:700;">Total</td>
+              <td style="text-align:right;font-weight:700;">{{ totais_colab.pendentes }}</td>
+              <td style="text-align:right;font-weight:700;">{{ totais_colab.resolvidos }}</td>
+              <td style="text-align:right;font-weight:700;color:var(--green);">{{ totais_colab.pct_conclusao|floatformat:1 }}%</td>
+              <td style="text-align:right;font-weight:700;color:var(--orange);">{{ totais_colab.pct_sla|floatformat:1 }}%</td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /tables-row -->
+
+  <script>
+    const CHART_DATA = {
+      porTipo: {
+        labels: [{% for t in por_tipo %}"{{ t.nome }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+        values: [{% for t in por_tipo %}{{ t.total }}{% if not forloop.last %},{% endif %}{% endfor %}],
+        cores:  [{% for t in por_tipo %}"{{ t.cor }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+      },
+      conclusao: {
+        concluidos:    {{ conclusao.concluidos }},
+        naoConcluidos: {{ conclusao.nao_concluidos }},
+      },
+      lineDays:       {{ grafico_linha.dias|safe }},
+      lineCriados:    {{ grafico_linha.criados|safe }},
+      lineResolvidos: {{ grafico_linha.resolvidos|safe }},
+    };
+  </script>
+
+</div><!-- /ind -->
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{% static 'js/indicadores.js' %}"></script>
+{% endblock %}

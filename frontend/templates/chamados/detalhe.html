@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+{% load static %}
+{% load chamado_tags %}
+{% block title %}Chamado #{{ chamado.pk }}{% endblock %}
+{% block topbar %}{% endblock %}
+
+{% block content %}
+
+{# ── Hero ── #}
+<div class="ch-hero">
+  <div class="ch-hero-left">
+    <div class="ch-hero-id">Chamado #{{ chamado.pk }}</div>
+    <h2 class="ch-hero-title">{{ chamado.assunto }}</h2>
+    <div class="ch-hero-badges">
+      <span class="ch-badge ch-badge-{{ chamado.status|status_color }}">{{ chamado.get_status_display }}</span>
+      <span class="ch-badge ch-badge-{{ chamado.prioridade|prioridade_color }}">{{ chamado.get_prioridade_display }}</span>
+      <span class="ch-badge ch-badge-gray">{{ chamado.origem }}</span>
+    </div>
+  </div>
+  <div class="ch-hero-actions">
+    {% if pode_responder %}
+      {% if not chamado.agente %}
+      <form method="post" action="{% url 'core:chamado_atribuir' chamado.pk %}" style="display:inline">
+        {% csrf_token %}
+        <button class="ch-btn ch-btn-ghost">Atribuir a mim</button>
+      </form>
+      {% endif %}
+      {% if chamado.status != 'resolvido' and chamado.status != 'fechado' %}
+      <form method="post" action="{% url 'core:chamado_fechar' chamado.pk %}" style="display:inline">
+        {% csrf_token %}
+        <button type="button" class="ch-btn ch-btn-primary"
+                onclick="GModal.confirm('Fechar Chamado', 'Confirma o fechamento do chamado #{{ chamado.pk }}?', this.closest('form'), 'Fechar')">
+          Fechar Chamado
+        </button>
+      </form>
+      {% endif %}
+    {% endif %}
+    <a class="ch-btn ch-btn-ghost" href="{% url 'core:meus_chamados' %}">← Voltar</a>
+  </div>
+</div>
+
+{# ── Grid: coluna principal + lateral ── #}
+<div class="ch-grid">
+
+  {# ── Coluna principal ── #}
+  <div class="ch-col-main">
+
+    {# Informações #}
+    <div class="card ch-card">
+      <div class="ch-card-header"><span class="ch-card-title">Informações</span></div>
+      <div class="ch-info-grid">
+        <div class="ch-info-item">
+          <span class="ch-info-label">Status</span>
+          <span class="ch-badge ch-badge-{{ chamado.status|status_color }}">{{ chamado.get_status_display }}</span>
+        </div>
+        <div class="ch-info-item">
+          <span class="ch-info-label">Prioridade</span>
+          <span class="ch-badge ch-badge-{{ chamado.prioridade|prioridade_color }}">{{ chamado.get_prioridade_display }}</span>
+        </div>
+        <div class="ch-info-item">
+          <span class="ch-info-label">Origem</span>
+          <span class="ch-info-value">{{ chamado.origem }}</span>
+        </div>
+        <div class="ch-info-item">
+          <span class="ch-info-label">Aberto por</span>
+          <span class="ch-info-value">
+            {% if chamado.aberto_por %}{{ chamado.aberto_por.username }}{% else %}—{% endif %}
+          </span>
+        </div>
+        <div class="ch-info-item">
+          <span class="ch-info-label">Agente</span>
+          <span class="ch-info-value {% if not chamado.agente %}ch-muted{% endif %}">
+            {% if chamado.agente %}{{ chamado.agente.username }}{% else %}Não atribuído{% endif %}
+          </span>
+        </div>
+        <div class="ch-info-item">
+          <span class="ch-info-label">Ativo</span>
+          <span class="ch-info-value">{{ chamado.ativo|default:"—" }}</span>
+        </div>
+        <div class="ch-info-item">
+          <span class="ch-info-label">Abertura</span>
+          <span class="ch-info-value">{{ chamado.aberto_em|date:"d/m/Y H:i" }}</span>
+        </div>
+        <div class="ch-info-item">
+          <span class="ch-info-label">Última atualização</span>
+          <span class="ch-info-value">{{ chamado.atualizado_em|date:"d/m/Y H:i" }}</span>
+        </div>
+        {% if chamado.fechado_em %}
+        <div class="ch-info-item" style="grid-column:1/-1">
+          <span class="ch-info-label">Fechamento</span>
+          <span class="ch-info-value">{{ chamado.fechado_em|date:"d/m/Y H:i" }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Descrição #}
+    <div class="card ch-card">
+      <div class="ch-card-header"><span class="ch-card-title">Descrição</span></div>
+      <div style="padding:16px">
+        <div class="ch-desc-box">{{ chamado.descricao|linebreaksbr|default:"Sem descrição." }}</div>
+      </div>
+    </div>
+
+    {# Histórico #}
+    <div class="card ch-card">
+      <div class="ch-card-header">
+        <span class="ch-card-title">Histórico de movimentações</span>
+        <span style="font-size:11px;color:var(--muted);">{{ historico|length }} registro{{ historico|length|pluralize }}</span>
+      </div>
+      <div style="padding:16px">
+        <div class="ch-timeline">
+          {% for h in historico %}
+          <div class="ch-timeline-item">
+            <div class="ch-timeline-dot-wrap">
+              <div class="ch-timeline-dot" style="background:{{ h.tipo|evento_bg_color }}">
+                {{ h.tipo|evento_icon }}
+              </div>
+              {% if not forloop.last %}<div class="ch-timeline-dot-line"></div>{% endif %}
+            </div>
+            <div class="ch-timeline-content">
+              <div class="ch-timeline-meta">
+                <span class="ch-timeline-author">
+                  {% if h.autor %}{{ h.autor.username }}{% else %}Sistema{% endif %}
+                </span>
+                {% if h.descricao %}
+                  <span class="ch-timeline-action">{{ h.descricao }}</span>
+                  {% if h.valor_novo %}
+                  <span class="ch-badge ch-badge-{{ h.valor_novo|status_color }}" style="font-size:10px">{{ h.valor_novo }}</span>
+                  {% endif %}
+                {% endif %}
+                <span class="ch-timeline-time">{{ h.quando|date:"d/m/Y H:i" }}</span>
+              </div>
+              {% if h.texto %}
+              <div class="ch-timeline-body">{{ h.texto|linebreaksbr }}</div>
+              {% endif %}
+            </div>
+          </div>
+          {% empty %}
+          <div class="ch-empty-state">Nenhuma movimentação registrada ainda.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+  </div>{# /col-main #}
+
+  {# ── Coluna lateral ── #}
+  <div class="ch-col-side">
+
+    {# SLA #}
+    <div class="card ch-card">
+      <div class="ch-sla-wrap">
+        <div class="ch-sla-header">
+          <span class="ch-sla-label">SLA — {{ sla.prazo_horas }}h</span>
+          {% if sla.dentro_prazo %}
+            <span style="color:var(--green);font-size:11px;font-weight:700;">Dentro do prazo</span>
+          {% else %}
+            <span style="color:var(--red);font-size:11px;font-weight:700;">Vencido</span>
+          {% endif %}
+        </div>
+        <div class="ch-sla-bg">
+          <div class="ch-sla-fill" style="
+            width:{{ sla.percentual_consumido }}%;
+            background:{% if sla.dentro_prazo %}var(--green){% else %}var(--red){% endif %};
+          "></div>
+        </div>
+        <span class="ch-sla-sub">
+          ~{{ sla.horas_decorridas }}h decorridas
+          {% if sla.dentro_prazo %}· ~{{ sla.horas_restantes }}h restantes{% endif %}
+        </span>
+      </div>
+      <div style="padding:12px 16px">
+        <div class="ch-side-list">
+          <div class="ch-side-row">
+            <span class="ch-side-label">Vencimento SLA</span>
+            <span class="ch-side-value" style="color:{% if sla.dentro_prazo %}var(--green){% else %}var(--red){% endif %}">
+              {{ sla.vencimento|date:"d/m/Y H:i" }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# Atualizar chamado (apenas suporte/admin) #}
+    {% if pode_responder %}
+    <div class="card ch-card">
+      <div class="ch-card-header"><span class="ch-card-title">Atualizar Chamado</span></div>
+      <div style="padding:16px">
+        <form method="post" action="{% url 'core:chamado_atualizar' chamado.pk %}">
+          {% csrf_token %}
+
+          <div class="ch-form-group">
+            <label class="ch-form-label">Status</label>
+            <div class="ch-select-wrap">{{ form.novo_status }}</div>
+          </div>
+
+          <div class="ch-form-group">
+            <label class="ch-form-label">Prioridade</label>
+            <div class="ch-select-wrap">{{ form.prioridade }}</div>
+          </div>
+
+          <div class="ch-form-group">
+            <label class="ch-form-label">Agente</label>
+            <div class="ch-select-wrap">{{ form.agente }}</div>
+          </div>
+
+          <div class="ch-form-group">
+            <label class="ch-form-label">Comentário</label>
+            {{ form.comentario }}
+          </div>
+
+          <button type="submit" class="ch-btn-save">Salvar</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    {# Anexos #}
+    <div class="card ch-card">
+      <div class="ch-card-header">
+        <span class="ch-card-title">Anexos</span>
+        {% if pode_responder %}
+        <form method="post" action="{% url 'core:chamado_anexar' chamado.pk %}"
+              enctype="multipart/form-data" id="form-anexo">
+          {% csrf_token %}
+          <input type="file" id="input-anexo" name="arquivo" accept=".pdf,.jpg,.jpeg,.png,.txt" style="display:none"
+                 onchange="document.getElementById('form-anexo').submit()">
+          <button type="button" onclick="document.getElementById('input-anexo').click()"
+                  style="background:none;border:none;cursor:pointer;color:var(--blue);font-size:12px;font-weight:700;">
+            + Adicionar
+          </button>
+        </form>
+        {% endif %}
+      </div>
+      <div style="padding:14px 16px">
+        {% for anexo in chamado.anexos.all %}
+        <a href="{{ anexo.arquivo.url }}" target="_blank" class="ch-attachment">
+          <div class="ch-attachment-icon">📎</div>
+          <span class="ch-attachment-name">{{ anexo.arquivo.name|filename }}</span>
+          <span class="ch-attachment-dl">↓</span>
+        </a>
+        {% empty %}
+        <div class="ch-empty-state" style="padding:20px 0">Nenhum anexo.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>{# /col-side #}
+</div>{# /ch-grid #}
+
+{% endblock %}

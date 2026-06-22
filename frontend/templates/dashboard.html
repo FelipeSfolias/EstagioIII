@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Dashboard{% endblock %}
+{% block topbar %}{% endblock %}
+
+{% block content %}
+<div class="ind dash">
+
+  <!-- ── Page Header ── -->
+  <div class="dash-header">
+    <div class="dash-header-row">
+      <h1 class="dash-h1">Dashboard</h1>
+      <span class="dash-period-chip">{{ periodo }}</span>
+    </div>
+    <p class="dash-subtitle">Visão geral dos chamados e projetos do período.</p>
+  </div>
+
+  <!-- ── KPI Row ── -->
+  <div class="kpi-row">
+
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-card-header">
+        <span class="kpi-card-header-label">Total de Chamados</span>
+        <span class="kpi-card-header-dot"></span>
+      </div>
+      <div class="kpi-card-body">
+        <div class="kpi-total">{{ kpi.total }}</div>
+        <div class="kpi-subs">
+          <div class="kpi-sub sub-blue">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Aberto</span>
+            <span class="kpi-sub-value">{{ kpi.aberto }}</span>
+          </div>
+          <div class="kpi-sub sub-yellow">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Em atend.</span>
+            <span class="kpi-sub-value">{{ kpi.em_atendimento }}</span>
+          </div>
+          <div class="kpi-sub sub-green">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Resolvido</span>
+            <span class="kpi-sub-value">{{ kpi.resolvido }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-orange">
+      <div class="kpi-card-header">
+        <span class="kpi-card-header-label">Por Prioridade</span>
+        <span class="kpi-card-header-dot"></span>
+      </div>
+      <div class="kpi-card-body">
+        <div class="kpi-total">{{ kpi.total }}</div>
+        <div class="kpi-subs">
+          <div class="kpi-sub sub-red">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Alta</span>
+            <span class="kpi-sub-value">{{ kpi.prioridade_alta }}</span>
+          </div>
+          <div class="kpi-sub sub-yellow">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Média</span>
+            <span class="kpi-sub-value">{{ kpi.prioridade_media }}</span>
+          </div>
+          <div class="kpi-sub sub-green">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Baixa</span>
+            <span class="kpi-sub-value">{{ kpi.prioridade_baixa }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-green">
+      <div class="kpi-card-header">
+        <span class="kpi-card-header-label">Resolvidos</span>
+        <span class="kpi-card-header-dot"></span>
+      </div>
+      <div class="kpi-card-body">
+        <div class="kpi-total">{{ kpi.resolvido }}</div>
+        <div class="kpi-subs">
+          <div class="kpi-sub sub-green">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Dentro SLA</span>
+            <span class="kpi-sub-value">{{ kpi.dentro_sla }}</span>
+          </div>
+          <div class="kpi-sub sub-red">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Fora SLA</span>
+            <span class="kpi-sub-value">{{ kpi.fora_sla }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-purple">
+      <div class="kpi-card-header">
+        <span class="kpi-card-header-label">Pendentes</span>
+        <span class="kpi-card-header-dot"></span>
+      </div>
+      <div class="kpi-card-body">
+        <div class="kpi-total">{{ kpi.pendentes }}</div>
+        <div class="kpi-subs">
+          <div class="kpi-sub sub-blue">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Aberto</span>
+            <span class="kpi-sub-value">{{ kpi.aberto }}</span>
+          </div>
+          <div class="kpi-sub sub-yellow">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Em atend.</span>
+            <span class="kpi-sub-value">{{ kpi.em_atendimento }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /kpi-row -->
+
+  <!-- ── Charts Row ── -->
+  <div class="charts-row">
+
+    <!-- Donut: Conclusão de Chamados -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Conclusão de Chamados</span>
+        <span class="card-badge">{{ total_chamados }} total</span>
+      </div>
+      <div class="card-body">
+        <div class="donut-wrap">
+          <div class="donut-canvas-wrap" style="width:142px;height:142px;">
+            <svg viewBox="0 0 42 42" width="142" height="142" style="display:block;transform:rotate(-90deg);">
+              <circle cx="21" cy="21" r="15.9155" fill="none" stroke="#eef1f5" stroke-width="4.8"/>
+              {% for seg in conclusao_segments %}
+              <circle cx="21" cy="21" r="15.9155" fill="none"
+                      stroke="{{ seg.cor }}" stroke-width="4.8"
+                      stroke-dasharray="{{ seg.dasharray }}"
+                      stroke-dashoffset="{{ seg.dashoffset }}"
+                      stroke-linecap="butt"/>
+              {% endfor %}
+            </svg>
+            <div class="donut-center">
+              <span class="donut-center-num">{{ total_chamados }}</span>
+              <span class="donut-center-label">chamados</span>
+            </div>
+          </div>
+          <div class="donut-legend">
+            {% for seg in conclusao_segments %}
+            <div class="legend-item">
+              <span class="legend-dot" style="background:{{ seg.cor }}"></span>
+              <span class="legend-text">{{ seg.label }}</span>
+              <span class="legend-pct">{{ seg.pct_fmt }}%</span>
+              <span class="legend-value">{{ seg.count }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Donut: Status dos Projetos -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Status dos Projetos</span>
+        <span class="card-badge">{{ total_proj }} projetos</span>
+      </div>
+      <div class="card-body">
+        <div class="donut-wrap">
+          <div class="donut-canvas-wrap" style="width:142px;height:142px;">
+            <svg viewBox="0 0 42 42" width="142" height="142" style="display:block;transform:rotate(-90deg);">
+              <circle cx="21" cy="21" r="15.9155" fill="none" stroke="#eef1f5" stroke-width="4.8"/>
+              {% for seg in proj_segments %}
+              <circle cx="21" cy="21" r="15.9155" fill="none"
+                      stroke="{{ seg.cor }}" stroke-width="4.8"
+                      stroke-dasharray="{{ seg.dasharray }}"
+                      stroke-dashoffset="{{ seg.dashoffset }}"
+                      stroke-linecap="butt"/>
+              {% endfor %}
+            </svg>
+            <div class="donut-center">
+              <span class="donut-center-num">{{ total_proj }}</span>
+              <span class="donut-center-label">projetos</span>
+            </div>
+          </div>
+          <div class="donut-legend">
+            {% for seg in proj_segments %}
+            <div class="legend-item">
+              <span class="legend-dot" style="background:{{ seg.cor }}"></span>
+              <span class="legend-text">{{ seg.label }}</span>
+              <span class="legend-pct">{{ seg.pct_fmt }}%</span>
+              <span class="legend-value">{{ seg.count }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /charts-row -->
+
+  <!-- ── Chamados Recentes ── -->
+  <div class="card">
+    <div class="recentes-card-header">
+      <span class="card-title">Chamados Recentes</span>
+      <a href="{% url 'core:chamados_todos' %}" class="recentes-link">Ver todos →</a>
+    </div>
+    <div>
+      <div class="recentes-cols">
+        <span style="width:46px;flex-shrink:0;">Nº</span>
+        <span style="flex:1;min-width:0;">Assunto</span>
+        <span style="width:100px;flex-shrink:0;">Prioridade</span>
+        <span style="width:116px;flex-shrink:0;text-align:right;">Status</span>
+      </div>
+      {% for c in recentes %}
+      <div class="recentes-row">
+        <a href="{% url 'core:chamado_detalhe' c.pk %}" class="recentes-num">#{{ c.pk }}</a>
+        <div class="recentes-assunto">
+          <div class="recentes-assunto-text">{{ c.assunto }}</div>
+          <div class="recentes-meta">{{ c.agente|default:"Não atribuído" }} · {{ c.quando }}</div>
+        </div>
+        <div style="width:100px;flex-shrink:0;">
+          {% if c.prioridade == "alta" or c.prioridade == "critica" %}
+            <span class="dash-pill dash-pill-red"><span class="dash-pill-dot"></span>{{ c.prioridade_label }}</span>
+          {% elif c.prioridade == "media" %}
+            <span class="dash-pill dash-pill-yellow"><span class="dash-pill-dot"></span>{{ c.prioridade_label }}</span>
+          {% else %}
+            <span class="dash-pill dash-pill-green"><span class="dash-pill-dot"></span>{{ c.prioridade_label }}</span>
+          {% endif %}
+        </div>
+        <div style="width:116px;flex-shrink:0;display:flex;justify-content:flex-end;">
+          {% if c.status == "aberto" %}
+            <span class="dash-pill dash-pill-blue"><span class="dash-pill-dot"></span>{{ c.status_label }}</span>
+          {% elif c.status == "em_atendimento" %}
+            <span class="dash-pill dash-pill-yellow"><span class="dash-pill-dot"></span>{{ c.status_label }}</span>
+          {% elif c.status == "resolvido" %}
+            <span class="dash-pill dash-pill-green"><span class="dash-pill-dot"></span>{{ c.status_label }}</span>
+          {% else %}
+            <span class="dash-pill dash-pill-slate"><span class="dash-pill-dot"></span>{{ c.status_label }}</span>
+          {% endif %}
+        </div>
+      </div>
+      {% empty %}
+      <div style="padding:16px 14px;color:var(--muted);font-size:13px;">Nenhum chamado registrado.</div>
+      {% endfor %}
+    </div>
+  </div><!-- /chamados recentes -->
+
+</div><!-- /ind dash -->
+{% endblock %}

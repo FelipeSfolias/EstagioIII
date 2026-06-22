@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Funcionários{% endblock %}
+{% block topbar %}{% endblock %}
+
+{% block content %}
+
+{# ── Cabeçalho ── #}
+<div class="page-header">
+  <div>
+    <div class="page-breadcrumb">Cadastros › Funcionários</div>
+    <h1>Funcionários <span class="chip">{{ usuarios|length }} cadastrados</span></h1>
+    <p class="page-subtitle">Gerencie os funcionários e seus acessos ao sistema.</p>
+  </div>
+</div>
+
+{# ── Card de cadastro ── #}
+<div class="fc-card">
+  <div class="fc-card-head">
+    <div id="fc-avatar" class="fc-avatar">?</div>
+    <div>
+      <div id="fc-title" class="fc-card-title">Novo funcionário</div>
+      <span id="fc-status-tag" class="fc-status-tag fc-tag-ativo">Ativo</span>
+    </div>
+  </div>
+
+  <form method="post" id="fc-form">
+    {% csrf_token %}
+
+    {# ── Seção 1: Dados pessoais ── #}
+    <div class="fc-section">
+      <div class="fc-section-title">
+        <span class="fc-section-num">1</span> Dados pessoais
+      </div>
+      <div class="fc-grid">
+        <div class="fg{% if form.nome.errors %} has-error{% endif %}">
+          <label for="{{ form.nome.id_for_label }}">Nome completo <span class="req">*</span></label>
+          {{ form.nome }}
+          {% for e in form.nome.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.cpf.errors %} has-error{% endif %}">
+          <label for="{{ form.cpf.id_for_label }}">CPF <span class="req">*</span></label>
+          {{ form.cpf }}
+          {% for e in form.cpf.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.contato.errors %} has-error{% endif %}">
+          <label for="{{ form.contato.id_for_label }}">Contato</label>
+          {{ form.contato }}
+          {% for e in form.contato.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.email.errors %} has-error{% endif %}">
+          <label for="{{ form.email.id_for_label }}">E-mail corporativo <span class="req">*</span></label>
+          {{ form.email }}
+          {% for e in form.email.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# ── Seção 2: Lotação & função ── #}
+    <div class="fc-section">
+      <div class="fc-section-title">
+        <span class="fc-section-num">2</span> Lotação &amp; função
+      </div>
+      <div class="fc-grid">
+        <div class="fg{% if form.funcao.errors %} has-error{% endif %}">
+          <label for="{{ form.funcao.id_for_label }}">Função</label>
+          {{ form.funcao }}
+          {% for e in form.funcao.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.setor.errors %} has-error{% endif %}">
+          <label for="{{ form.setor.id_for_label }}">Setor</label>
+          {{ form.setor }}
+          {% for e in form.setor.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.ramal.errors %} has-error{% endif %}">
+          <label for="{{ form.ramal.id_for_label }}">Ramal</label>
+          {{ form.ramal }}
+          {% for e in form.ramal.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.ativo_atribuido.errors %} has-error{% endif %}">
+          <label for="{{ form.ativo_atribuido.id_for_label }}">Patrimônio</label>
+          {{ form.ativo_atribuido }}
+          {% for e in form.ativo_atribuido.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.cidade.errors %} has-error{% endif %}">
+          <label for="{{ form.cidade.id_for_label }}">Cidade</label>
+          {{ form.cidade }}
+          {% for e in form.cidade.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.uf.errors %} has-error{% endif %}">
+          <label for="{{ form.uf.id_for_label }}">UF</label>
+          {{ form.uf }}
+          {% for e in form.uf.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# ── Seção 3: Acesso ao sistema ── #}
+    <div class="fc-section">
+      <div class="fc-section-title">
+        <span class="fc-section-num">3</span> Acesso ao sistema
+      </div>
+      <div class="fc-grid">
+        <div class="fg{% if form.username.errors %} has-error{% endif %}">
+          <label for="{{ form.username.id_for_label }}">Login</label>
+          {{ form.username }}
+          {% for e in form.username.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.perfil.errors %} has-error{% endif %}">
+          <label for="{{ form.perfil.id_for_label }}">Perfil</label>
+          {{ form.perfil }}
+          {% for e in form.perfil.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.nova_senha.errors %} has-error{% endif %}">
+          <label for="{{ form.nova_senha.id_for_label }}">Senha</label>
+          <div class="fc-password-wrap">
+            {{ form.nova_senha }}
+            <button type="button" class="fc-eye-btn" data-target="{{ form.nova_senha.id_for_label }}" aria-label="Mostrar senha">
+              <svg class="fc-eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+          {% for e in form.nova_senha.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.confirmar_senha.errors %} has-error{% endif %}">
+          <label for="{{ form.confirmar_senha.id_for_label }}">Confirmar senha</label>
+          <div class="fc-password-wrap">
+            {{ form.confirmar_senha }}
+            <button type="button" class="fc-eye-btn" data-target="{{ form.confirmar_senha.id_for_label }}" aria-label="Mostrar senha">
+              <svg class="fc-eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+          {% for e in form.confirmar_senha.errors %}<span class="fc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg fc-toggle-row">
+          <span>Funcionário ativo</span>
+          <label class="fc-switch" for="{{ form.ativo.id_for_label }}">
+            {{ form.ativo }}
+            <span class="fc-switch-track" aria-hidden="true"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    {% if form.non_field_errors %}
+      <div class="fc-section" style="padding-top:0">
+        {% for e in form.non_field_errors %}
+          <span class="fc-error">{{ e }}</span>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="fc-form-footer">
+      <span class="fc-required-note">* Campos obrigatórios</span>
+      <div class="fc-form-actions">
+        <button type="reset" class="btn-link">Limpar</button>
+        <button type="submit" class="btn">Salvar funcionário</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+{# ── Card de listagem ── #}
+<div class="fc-list-card">
+  <div class="fc-list-header">
+    <div class="fc-list-header-title">
+      Funcionários
+      <span class="chip">{{ usuarios|length }}</span>
+    </div>
+    <form method="get" class="fc-filters">
+      <input class="input-lite" type="text" name="q" value="{{ request.GET.q }}" placeholder="Nome, e-mail, CPF...">
+      <select name="setor" class="input-lite">
+        <option value="">Setor</option>
+        {% for s in setores %}
+          <option value="{{ s }}" {% if sel_setor == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+      <select name="ativo" class="input-lite">
+        <option value="">Status</option>
+        <option value="sim" {% if sel_ativo == 'sim' %}selected{% endif %}>Ativo</option>
+        <option value="nao" {% if sel_ativo == 'nao' %}selected{% endif %}>Inativo</option>
+      </select>
+      <button class="btn btn-sm">Filtrar</button>
+      <a class="btn-link btn-sm" href="{% url 'core:cad_usuarios' %}">Limpar</a>
+    </form>
+  </div>
+
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>Funcionário</th>
+        <th>CPF</th>
+        <th class="fc-col-hide">Contato</th>
+        <th class="fc-col-hide">Ramal</th>
+        <th>Função</th>
+        <th>Perfil</th>
+        <th class="fc-col-hide">Setor</th>
+        <th class="fc-col-hide">Cidade / UF</th>
+        <th class="fc-col-hide">Patrimônio</th>
+        <th>Status</th>
+        <th style="width:100px">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in usuarios %}
+        <tr>
+          <td>
+            <div class="fc-cell-user">
+              <div class="fc-avatar-sm" data-name="{{ u.nome }}"></div>
+              <div>
+                <div class="fc-cell-name">{{ u.nome }}</div>
+                <div class="fc-cell-email">{{ u.email }}</div>
+              </div>
+            </div>
+          </td>
+          <td>{{ u.cpf }}</td>
+          <td class="fc-col-hide">{{ u.contato|default:"—" }}</td>
+          <td class="fc-col-hide">{{ u.ramal|default:"—" }}</td>
+          <td>{{ u.funcao }}</td>
+          <td>
+            {% with g=u.usuario.groups.first.name|default:"" %}
+              {% if g %}
+                <span class="fc-badge fc-badge-{{ g }}">{{ g|capfirst }}</span>
+              {% else %}
+                <span class="fc-badge fc-badge-none">—</span>
+              {% endif %}
+            {% endwith %}
+          </td>
+          <td class="fc-col-hide">{{ u.setor }}</td>
+          <td class="fc-col-hide">{{ u.cidade }} / {{ u.uf }}</td>
+          <td class="fc-col-hide">{{ u.ativo_atribuido|default:"—" }}</td>
+          <td>
+            {% if u.ativo %}
+              <span class="badge-ativo">Ativo</span>
+            {% else %}
+              <span class="badge-inativo">Inativo</span>
+            {% endif %}
+          </td>
+          <td class="tbl-actions">
+            <a class="btn-icon edit" title="Editar" href="{% url 'core:usuario_editar' u.id %}">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19H4v-3L16.5 3.5z"/>
+                <path d="M15.2 5.2l3.6 3.6"/>
+              </svg>
+            </a>
+            <form method="post" action="{% url 'core:usuario_excluir' u.id %}" class="inline">
+              {% csrf_token %}
+              <button type="button" class="btn-icon danger" title="Excluir"
+                      onclick="GModal.confirm('Excluir funcionário', 'Excluir {{ u.nome }}? Esta ação não pode ser desfeita.', this.closest('form'), 'Excluir')">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  <path d="M10 11v6M14 11v6"/>
+                </svg>
+              </button>
+            </form>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="11" class="fc-empty">Nenhum funcionário encontrado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/funcionarios.js' %}" defer></script>
+{% endblock %}

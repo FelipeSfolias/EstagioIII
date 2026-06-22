@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+{% load static %}
+{% load l10n %}
+{% block title %}Projetos — Indicadores{% endblock %}
+
+{% block content %}
+<div class="ind">
+
+  <!-- ── KPI Row ── -->
+  <div class="kpi-row">
+
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-card-header">
+        <span class="kpi-card-header-label">Total de Projetos</span>
+        <span class="kpi-card-header-dot"></span>
+      </div>
+      <div class="kpi-card-body">
+        <div class="kpi-total">{{ kpis.total }}</div>
+        <div class="kpi-subs">
+          <div class="kpi-sub sub-green">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Concluídos</span>
+            <span class="kpi-sub-value">{{ kpis.concluidos }}</span>
+          </div>
+          <div class="kpi-sub sub-orange">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Em andamento</span>
+            <span class="kpi-sub-value">{{ kpis.em_andamento }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-green">
+      <div class="kpi-card-header">
+        <span class="kpi-card-header-label">Concluídos</span>
+        <span class="kpi-card-header-dot"></span>
+      </div>
+      <div class="kpi-card-body">
+        <div class="kpi-total">{{ kpis.concluidos }}</div>
+        <div class="kpi-subs">
+          <div class="kpi-sub sub-green">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">% Conclusão</span>
+            <span class="kpi-sub-value">{{ kpis.pct_concluido|unlocalize }}%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-orange">
+      <div class="kpi-card-header">
+        <span class="kpi-card-header-label">Em Andamento</span>
+        <span class="kpi-card-header-dot"></span>
+      </div>
+      <div class="kpi-card-body">
+        <div class="kpi-total">{{ kpis.em_andamento }}</div>
+        <div class="kpi-subs">
+          <div class="kpi-sub sub-blue">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">No prazo</span>
+            <span class="kpi-sub-value">{{ kpis.no_prazo }}</span>
+          </div>
+          <div class="kpi-sub sub-red">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Atrasados</span>
+            <span class="kpi-sub-value">{{ kpis.atrasados }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-purple">
+      <div class="kpi-card-header">
+        <span class="kpi-card-header-label">Não Iniciados</span>
+        <span class="kpi-card-header-dot"></span>
+      </div>
+      <div class="kpi-card-body">
+        <div class="kpi-total">{{ kpis.nao_iniciados }}</div>
+        <div class="kpi-subs">
+          <div class="kpi-sub sub-purple">
+            <span class="kpi-sub-dot"></span>
+            <span class="kpi-sub-label">Aguardando início</span>
+            <span class="kpi-sub-value">{{ kpis.nao_iniciados }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /kpi-row -->
+
+  <!-- ── Donuts ── -->
+  <div class="charts-row">
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Desempenho de Conclusão</span>
+        <span class="card-badge">{{ kpis.total }} projetos</span>
+      </div>
+      <div class="card-body">
+        <div class="donut-wrap">
+          <div class="donut-canvas-wrap">
+            <canvas id="chartConcl" width="130" height="130"></canvas>
+            <div class="donut-center">
+              <span class="donut-center-num">{{ kpis.pct_concluido|unlocalize }}%</span>
+              <span class="donut-center-label">concluído</span>
+            </div>
+          </div>
+          <div class="donut-legend">
+            {% for s in concl_segments %}
+            <div class="legend-item">
+              <span class="legend-dot" style="background:{{ s.color }}"></span>
+              <span class="legend-text">{{ s.label }}</span>
+              <span class="legend-pct">{{ s.pct|unlocalize }}%</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Projetos por Status</span>
+        <span class="card-badge">{{ status_total }} projetos</span>
+      </div>
+      <div class="card-body">
+        <div class="donut-wrap">
+          <div class="donut-canvas-wrap">
+            <canvas id="chartStatus" width="130" height="130"></canvas>
+            <div class="donut-center">
+              <span class="donut-center-num">{{ status_total }}</span>
+              <span class="donut-center-label">projetos</span>
+            </div>
+          </div>
+          <div class="donut-legend">
+            {% for s in status_segments %}
+            <div class="legend-item">
+              <span class="legend-dot" style="background:{{ s.color }}"></span>
+              <span class="legend-text">{{ s.label|title }}</span>
+              <span class="legend-pct">{{ s.pct|unlocalize }}%</span>
+              <span class="legend-value">{{ s.count }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /charts-row -->
+
+  <!-- ── Tabelas ── -->
+  <div class="tables-row">
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">% Concluído por Responsável</span>
+        <span class="card-badge">{{ por_resp|length }} responsáveis</span>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Responsável</th>
+              <th style="text-align:right;">Projetos</th>
+              <th style="text-align:right;">Concluídos</th>
+              <th style="text-align:right;">% Conclusão</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in por_resp %}
+            <tr>
+              <td style="font-weight:600;">{{ r.resp }}</td>
+              <td style="text-align:right;">{{ r.total }}</td>
+              <td style="text-align:right;">{{ r.concl }}</td>
+              <td style="text-align:right;">
+                <span class="ind-badge {% if r.pct >= 80 %}ind-badge-green{% elif r.pct >= 50 %}ind-badge-orange{% else %}ind-badge-red{% endif %}">
+                  {{ r.pct|unlocalize }}%
+                </span>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" style="text-align:center;color:var(--muted);">Sem dados.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Área de Atuação</span>
+        <span class="card-badge">{{ por_area|length }} áreas</span>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Área</th>
+              <th style="text-align:right;">Projetos</th>
+              <th style="text-align:right;">%</th>
+              <th style="text-align:right;">Andamento</th>
+              <th style="text-align:right;">Concluídos</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in por_area %}
+            <tr>
+              <td style="font-weight:600;">{{ a.area }}</td>
+              <td style="text-align:right;">{{ a.total }}</td>
+              <td style="text-align:right;">
+                <span class="ind-badge ind-badge-blue">{{ a.pct|unlocalize }}%</span>
+              </td>
+              <td style="text-align:right;">{{ a.anda }}</td>
+              <td style="text-align:right;">{{ a.concl }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" style="text-align:center;color:var(--muted);">Sem dados.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /tables-row -->
+
+</div><!-- /ind -->
+
+<script>
+  const PROJ_DATA = {
+    concl: {
+      labels: [{% for s in concl_segments %}"{{ s.label }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+      values: [{% for s in concl_segments %}{{ s.pct|unlocalize }}{% if not forloop.last %},{% endif %}{% endfor %}],
+      colors: [{% for s in concl_segments %}"{{ s.color }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+    },
+    status: {
+      labels: [{% for s in status_segments %}"{{ s.label|title }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+      values: [{% for s in status_segments %}{{ s.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+      colors: [{% for s in status_segments %}"{{ s.color }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+    },
+  };
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const donutDefaults = {
+    responsive: false,
+    cutout: '72%',
+    animation: { animateRotate: true, duration: 700 },
+    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+  };
+
+  new Chart(document.getElementById('chartConcl'), {
+    type: 'doughnut',
+    data: {
+      labels: PROJ_DATA.concl.labels,
+      datasets: [{ data: PROJ_DATA.concl.values, backgroundColor: PROJ_DATA.concl.colors, borderWidth: 0, hoverOffset: 4 }],
+    },
+    options: { ...donutDefaults },
+  });
+
+  new Chart(document.getElementById('chartStatus'), {
+    type: 'doughnut',
+    data: {
+      labels: PROJ_DATA.status.labels,
+      datasets: [{ data: PROJ_DATA.status.values, backgroundColor: PROJ_DATA.status.colors, borderWidth: 0, hoverOffset: 4 }],
+    },
+    options: { ...donutDefaults },
+  });
+})();
+</script>
+{% endblock %}

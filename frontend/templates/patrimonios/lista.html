@@ -1,0 +1,646 @@
+{% extends "base.html" %}
+{% block title %}Consulta de Patrimônios{% endblock %}
+{% block topbar %}{% endblock %}
+
+{% block content %}
+<meta name="csrf-token" content="{{ csrf_token }}">
+
+<style>
+/* ── Tokens locais ──────────────────────────────────────────────────── */
+:root {
+  --p-blue:    #2563eb; --p-blue-l: #eff6ff; --p-blue-d: #1d4ed8;
+  --p-green:   #16a34a; --p-green-l: #f0fdf4;
+  --p-red:     #dc2626; --p-red-l:  #fef2f2;
+  --p-orange:  #ea580c; --p-orange-l:#fff7ed;
+  --p-yellow:  #ca8a04; --p-yellow-l:#fefce8;
+  --p-purple:  #7c3aed; --p-purple-l:#f5f3ff;
+  --p-slate:   #475569; --p-slate-l: #f1f5f9;
+  --p-bds:     #cfd3da;
+  --p-r: 10px; --p-rs: 7px;
+  --p-sh: 0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.05);
+}
+
+/* ── Page header ────────────────────────────────────────────────────── */
+.ph{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.ph-title{font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--text);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ph-chip{font-size:12px;font-weight:700;background:var(--p-blue-l);color:var(--p-blue);border-radius:20px;padding:3px 9px;line-height:1.4}
+.ph-sub{font-size:12.5px;color:var(--muted);margin-top:4px}
+.ph-right{display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap}
+.ph-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:var(--p-rs);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--text);text-decoration:none;transition:background .12s,border-color .12s;font-family:inherit}
+.ph-btn:hover{background:var(--bg);border-color:var(--p-bds)}
+.ph-btn-primary{background:var(--p-blue);color:#fff;border-color:var(--p-blue)}
+.ph-btn-primary:hover{background:var(--p-blue-d);border-color:var(--p-blue-d)}
+
+/* ── KPI strip ──────────────────────────────────────────────────────── */
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+.kpi-card{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--p-r);padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color .15s,box-shadow .15s;text-align:left;font-family:inherit;width:100%}
+.kpi-card:hover{border-color:var(--p-bds);box-shadow:var(--p-sh)}
+.kpi-card.active{border-color:var(--p-blue);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.kpi-total.active  {border-color:var(--p-slate);  box-shadow:0 0 0 3px rgba(71,85,105,.12)}
+.kpi-emuso.active  {border-color:var(--p-green);  box-shadow:0 0 0 3px rgba(22,163,74,.12)}
+.kpi-disp.active   {border-color:var(--p-blue);   box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.kpi-manut.active  {border-color:var(--p-orange);  box-shadow:0 0 0 3px rgba(234,88,12,.12)}
+.kpi-baixado.active{border-color:var(--p-red);    box-shadow:0 0 0 3px rgba(220,38,38,.12)}
+.kpi-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.kpi-body{display:flex;align-items:center;gap:10px;flex:1}
+.kpi-label{font-size:14px;font-weight:600;color:var(--text)}
+.kpi-value{font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--text);line-height:1}
+.kpi-delta{display:none}
+.kpi-strip .kpi-total{margin-bottom:0;font-size:inherit;letter-spacing:inherit;line-height:inherit;font-weight:inherit}
+.kpi-total   .kpi-icon{background:var(--p-slate-l); color:var(--p-slate)}
+.kpi-emuso   .kpi-icon{background:var(--p-green-l); color:var(--p-green)}
+.kpi-disp    .kpi-icon{background:var(--p-blue-l);  color:var(--p-blue)}
+.kpi-manut   .kpi-icon{background:var(--p-orange-l);color:var(--p-orange)}
+.kpi-baixado .kpi-icon{background:var(--p-red-l);   color:var(--p-red)}
+
+/* ── Filter card ────────────────────────────────────────────────────── */
+.filter-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--p-r);padding:12px 14px;margin-bottom:12px}
+.filter-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.search-box{flex:1;min-width:240px;height:34px;border:1px solid var(--line);border-radius:var(--p-rs);background:#fafbfc;display:flex;align-items:center;gap:6px;padding:0 10px;transition:border-color .15s,box-shadow .15s}
+.search-box:focus-within{border-color:var(--p-blue);background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.search-box input{flex:1;border:none;background:transparent;font-size:12.5px;font-family:inherit;color:var(--text);outline:none}
+.search-box input::placeholder{color:var(--muted)}
+.search-kbd{font-size:10px;font-weight:600;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--muted);white-space:nowrap;flex-shrink:0}
+.cs-wrap{position:relative;height:34px;min-width:140px;border:1px solid var(--line);border-radius:var(--p-rs);background:var(--surface);cursor:pointer}
+.cs-wrap:focus-within{border-color:var(--p-blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.cs-display{display:flex;align-items:center;justify-content:space-between;height:100%;padding:0 10px 0 12px;font-size:12.5px;color:var(--text);pointer-events:none;user-select:none;gap:6px;white-space:nowrap;overflow:hidden}
+.cs-display span{overflow:hidden;text-overflow:ellipsis}
+.cs-display strong{font-weight:600}
+.cs-arrow{flex-shrink:0;color:var(--muted)}
+.cs-wrap select{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;font-size:12.5px}
+.filter-div{width:1px;height:22px;background:var(--line);flex-shrink:0}
+.filter-clear{font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;padding:0;font-family:inherit;text-decoration:none;transition:color .12s;white-space:nowrap}
+.filter-clear:hover{color:var(--p-red);text-decoration:underline}
+
+/* ── Chips ──────────────────────────────────────────────────────────── */
+.chips-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-bottom:12px}
+.chip{display:inline-flex;align-items:center;gap:4px;background:var(--p-blue-l);border:1px solid #dbeafe;color:var(--p-blue);border-radius:20px;padding:3px 4px 3px 10px;font-size:11.5px;font-weight:600}
+.chip-x{width:16px;height:16px;border-radius:50%;background:rgba(37,99,235,.15);border:none;color:var(--p-blue);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;line-height:1;padding:0;font-family:inherit;transition:background .12s,color .12s}
+.chip-x:hover{background:var(--p-blue);color:#fff}
+.chips-clear{font-size:11.5px;color:var(--muted);background:none;border:none;cursor:pointer;padding:0 4px;font-family:inherit;transition:color .12s;text-decoration:none}
+.chips-clear:hover{color:var(--p-red);text-decoration:underline}
+
+/* ── Table card ─────────────────────────────────────────────────────── */
+.table-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--p-r);box-shadow:var(--p-sh);overflow:hidden}
+.tbl-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#fafbfc;border-bottom:1px solid var(--line)}
+.tbl-toolbar-info{font-size:12.5px;color:var(--muted)}
+.tbl-toolbar-info b{color:var(--text);font-weight:700}
+.tbl-toolbar-right{display:flex;align-items:center;gap:4px}
+.tbl-icon-btn{width:30px;height:30px;border:1px solid var(--line);border-radius:6px;background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:background .12s,color .12s,border-color .12s}
+.tbl-icon-btn:hover{background:var(--bg);color:var(--text);border-color:var(--p-bds)}
+
+/* Bulk */
+.bulk-bar{display:none;align-items:center;justify-content:space-between;padding:9px 14px;background:var(--p-blue-l);border-bottom:1px solid #dbeafe}
+.bulk-bar.on{display:flex}
+.bulk-bar-left{display:flex;align-items:center;gap:10px}
+.bulk-count{font-size:12.5px;font-weight:600;color:var(--p-blue-d)}
+.bulk-bar-right{display:flex;align-items:center;gap:6px}
+.bulk-btn{font-size:12px;font-weight:600;padding:5px 10px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--text);cursor:pointer;font-family:inherit;transition:background .12s,border-color .12s}
+.bulk-btn:hover{background:var(--bg);border-color:var(--p-bds)}
+.bulk-btn.danger:hover{background:var(--p-red-l);border-color:#fecaca;color:var(--p-red)}
+
+/* Table */
+.pat-tbl{width:100%;border-collapse:collapse}
+.pat-tbl thead th{background:#f8f9fb;text-align:left;padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap;user-select:none}
+.pat-tbl thead th.sortable{cursor:pointer}
+.pat-tbl thead th.sortable:hover,.pat-tbl thead th.sorted{color:var(--p-blue)}
+.sort-ic{opacity:.35;font-size:10px;margin-left:2px}
+.sort-ic.on{opacity:1}
+.pat-tbl td{padding:11px 12px;border-bottom:1px solid var(--line);font-size:12.5px;vertical-align:middle}
+.pat-tbl tr:last-child td{border-bottom:none}
+.pat-tbl tbody tr{cursor:pointer;transition:background .1s}
+.pat-tbl tbody tr:hover td{background:#f5f7ff}
+.pat-tbl tbody tr.sel td{background:var(--p-blue-l)}
+input[type=checkbox]{accent-color:var(--p-blue);cursor:pointer}
+
+/* Cols */
+.col-id{font-family:'Courier New',monospace;font-size:12px;color:var(--muted);font-weight:600}
+.col-pat{color:var(--p-blue);font-weight:700;text-decoration:none}
+.col-pat:hover{text-decoration:underline}
+.col-serie{font-family:'Courier New',monospace;font-size:12px;color:var(--muted)}
+.col-marca{font-size:11px;text-transform:uppercase;color:var(--muted);font-weight:600;display:block;line-height:1.3}
+.col-nmod{font-size:12.5px;font-weight:500;color:var(--text)}
+.empty-cell{color:var(--muted)}
+
+/* Category pill */
+.cat-pill{display:inline-flex;align-items:center;gap:5px;border-radius:6px;padding:3px 8px;font-size:12px;font-weight:600;white-space:nowrap;line-height:1.4}
+.c-notebook  {background:var(--p-purple-l);color:var(--p-purple)}
+.c-desktop   {background:var(--p-slate-l); color:var(--p-slate)}
+.c-monitor   {background:var(--p-blue-l);  color:var(--p-blue)}
+.c-nobreak   {background:var(--p-orange-l);color:var(--p-orange)}
+.c-smartphone{background:var(--p-green-l); color:var(--p-green)}
+.c-servidor  {background:var(--p-red-l);   color:var(--p-red)}
+.c-impressora{background:var(--p-orange-l);color:var(--p-orange)}
+.c-switch    {background:var(--p-yellow-l);color:var(--p-yellow)}
+.c-outro     {background:var(--p-slate-l); color:var(--p-slate)}
+
+/* Estado badge */
+.est-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+.est-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.9;flex-shrink:0}
+.e-em_uso    {background:var(--p-green-l); color:var(--p-green)}
+.e-estoque   {background:var(--p-blue-l);  color:var(--p-blue)}
+.e-manutencao{background:var(--p-orange-l);color:var(--p-orange)}
+.e-descartado{background:#f3f4f6;color:#4b5563}
+
+/* Local */
+.col-local-inner{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)}
+
+/* Custodiante */
+.cust-wrap{display:flex;align-items:center;gap:7px;max-width:160px}
+.cust-av{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#fff;flex-shrink:0;background:#475569}
+.cust-name{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Actions */
+.tbl-act{display:flex;align-items:center;justify-content:flex-end;gap:4px}
+.act-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:background .12s,color .12s,border-color .12s;text-decoration:none}
+.act-btn:hover{background:var(--p-blue-l);color:var(--p-blue);border-color:#bfdbfe}
+.act-btn.del:hover{background:var(--p-red-l);color:var(--p-red);border-color:#fecaca}
+
+/* Empty */
+.tbl-empty{text-align:center;padding:48px 24px;color:var(--muted);font-size:13px}
+
+/* Pagination */
+.pat-pag{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#fafbfc;border-top:1px solid var(--line);flex-wrap:wrap;gap:8px}
+.pag-info{display:flex;align-items:center;gap:14px;font-size:12.5px;color:var(--muted)}
+.pag-per{display:flex;align-items:center;gap:6px}
+.pag-per select{font-size:12px;font-family:inherit;border:1px solid var(--line);border-radius:5px;padding:2px 4px;background:var(--surface);color:var(--text);cursor:pointer}
+.pag-btns{display:flex;align-items:center;gap:3px}
+.pag-btn{min-width:30px;height:30px;padding:0 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:12.5px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:background .12s,color .12s;font-family:inherit}
+.pag-btn:hover:not(:disabled){background:var(--bg);color:var(--text)}
+.pag-btn.act{background:var(--p-blue);color:#fff;border-color:var(--p-blue);font-weight:700}
+.pag-btn:disabled{opacity:.4;cursor:not-allowed}
+.pag-ellipsis{display:flex;align-items:center;justify-content:center;width:30px;height:30px;color:var(--muted);font-size:13px}
+
+/* Dense */
+body.dense .pat-tbl td{padding:7px 12px}
+body.dense .pat-tbl thead th{padding:8px 12px}
+body.dense .cust-av{width:22px;height:22px;font-size:9.5px}
+
+/* Responsive */
+@media(max-width:1100px){.kpi-strip{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:820px){
+  .kpi-strip{grid-template-columns:repeat(2,1fr)}
+  .col-sh,.col-sd,.col-lh,.col-ld{display:none}
+}
+</style>
+
+{# ── FILTER FORM ─────────────────────────────────────────────────────── #}
+<form method="get" id="filterForm">
+  <input type="hidden" name="page"     id="pageInput"    value="{{ page_obj.number }}">
+  <input type="hidden" name="per_page" id="perPageInput" value="{{ per_page }}">
+
+  {# Page header #}
+  <div class="ph">
+    <div>
+      <h1 class="ph-title">
+        Consulta de Patrimônios
+        <span class="ph-chip">{{ kpi.total }} itens</span>
+      </h1>
+      <p class="ph-sub">Pesquise, filtre e gerencie todos os ativos cadastrados.</p>
+    </div>
+    <div class="ph-right">
+      <button type="button" class="ph-btn" title="Gerar comodato"
+              onclick="GModal.alert('Comodato','Geração de comodato disponível em breve.')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Comodato
+      </button>
+      <button type="button" class="ph-btn" title="Importar patrimônios"
+              onclick="GModal.alert('Importar','Importação em lote disponível em breve.')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Importar
+      </button>
+      <button type="button" class="ph-btn" title="Exportar patrimônios"
+              onclick="GModal.alert('Exportar','Exportação disponível em breve.')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Exportar
+      </button>
+      <a href="{% url 'core:cad_ativos' %}" class="ph-btn ph-btn-primary" title="Cadastrar novo patrimônio">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        Novo Patrimônio
+      </a>
+    </div>
+  </div>
+
+  {# KPI strip #}
+  <div class="kpi-strip">
+
+    <button type="button" class="kpi-card kpi-total{% if not sel_estado and not sel_categoria and not busca and not sel_local %} active{% endif %}"
+            onclick="kpiClick('')" title="Ver todos">
+      <span class="kpi-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      </span>
+      <span class="kpi-body"><span class="kpi-label">Total</span><span class="kpi-value">{{ kpi.total }}</span></span>
+    </button>
+
+    <button type="button" class="kpi-card kpi-emuso{% if sel_estado == 'em_uso' %} active{% endif %}"
+            onclick="kpiClick('em_uso')" title="Em uso">
+      <span class="kpi-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+      </span>
+      <span class="kpi-body"><span class="kpi-label">Em uso</span><span class="kpi-value">{{ kpi.em_uso }}</span></span>
+    </button>
+
+    <button type="button" class="kpi-card kpi-disp{% if sel_estado == 'estoque' %} active{% endif %}"
+            onclick="kpiClick('estoque')" title="Disponível">
+      <span class="kpi-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      </span>
+      <span class="kpi-body"><span class="kpi-label">Disponível</span><span class="kpi-value">{{ kpi.disponivel }}</span></span>
+    </button>
+
+    <button type="button" class="kpi-card kpi-manut{% if sel_estado == 'manutencao' %} active{% endif %}"
+            onclick="kpiClick('manutencao')" title="Manutenção">
+      <span class="kpi-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      </span>
+      <span class="kpi-body"><span class="kpi-label">Manutenção</span><span class="kpi-value">{{ kpi.manutencao }}</span></span>
+    </button>
+
+    <button type="button" class="kpi-card kpi-baixado{% if sel_estado == 'descartado' %} active{% endif %}"
+            onclick="kpiClick('descartado')" title="Descartado">
+      <span class="kpi-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      </span>
+      <span class="kpi-body"><span class="kpi-label">Baixados</span><span class="kpi-value">{{ kpi.baixado }}</span></span>
+    </button>
+
+  </div>
+
+  {# Filter card #}
+  <div class="filter-card">
+    <div class="filter-row">
+
+      <div class="search-box">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" name="q" id="searchInput" value="{{ busca }}"
+               placeholder="Buscar por patrimônio, nº série, modelo ou custodiante..."
+               aria-label="Buscar patrimônios">
+        <kbd class="search-kbd">⌘K</kbd>
+      </div>
+
+      <div class="cs-wrap">
+        <div class="cs-display">
+          <span>Categoria: <strong id="lblCategoria">{% if sel_categoria %}{{ sel_categoria }}{% else %}Todas{% endif %}</strong></span>
+          <svg class="cs-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <select name="categoria" aria-label="Filtrar por categoria"
+                onchange="resetPage();syncCsLabel(this,'lblCategoria','Todas');submitForm()">
+          <option value="">Todas</option>
+          {% for val, label in categorias %}
+            <option value="{{ val }}" {% if sel_categoria == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="cs-wrap">
+        <div class="cs-display">
+          <span>Estado: <strong id="lblEstado">{% if sel_estado %}{% for v,l in estados %}{% if v == sel_estado %}{{ l }}{% endif %}{% endfor %}{% else %}Todos{% endif %}</strong></span>
+          <svg class="cs-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <select name="estado" id="estadoSelect" aria-label="Filtrar por estado"
+                onchange="resetPage();syncCsLabel(this,'lblEstado','Todos');submitForm()">
+          <option value="">Todos</option>
+          {% for val, label in estados %}
+            <option value="{{ val }}" {% if sel_estado == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="cs-wrap">
+        <div class="cs-display">
+          <span>Local: <strong id="lblLocal">{% if sel_local %}{% for l in locais %}{% if l.id|stringformat:"s" == sel_local %}{{ l.nome }}{% endif %}{% endfor %}{% else %}Todos{% endif %}</strong></span>
+          <svg class="cs-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <select name="local" aria-label="Filtrar por local"
+                onchange="resetPage();syncCsLabel(this,'lblLocal','Todos');submitForm()">
+          <option value="">Todos</option>
+          {% for l in locais %}
+            <option value="{{ l.id }}" {% if l.id|stringformat:"s" == sel_local %}selected{% endif %}>{{ l.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="filter-div"></div>
+      <a href="{% url 'core:patrimonios_lista' %}" class="filter-clear" title="Limpar todos os filtros">Limpar filtros</a>
+    </div>
+  </div>
+
+  {# Active chips #}
+  {% if busca or sel_categoria or sel_estado or sel_local %}
+  <div class="chips-bar">
+    {% if busca %}
+    <span class="chip">"{{ busca }}"
+      <button type="button" class="chip-x" onclick="removeFilter('q')" title="Remover busca">×</button>
+    </span>
+    {% endif %}
+    {% if sel_categoria %}
+    <span class="chip">Categoria: {{ sel_categoria }}
+      <button type="button" class="chip-x" onclick="removeFilter('categoria')" title="Remover categoria">×</button>
+    </span>
+    {% endif %}
+    {% if sel_estado %}
+    <span class="chip">Estado: {% for v,l in estados %}{% if v == sel_estado %}{{ l }}{% endif %}{% endfor %}
+      <button type="button" class="chip-x" onclick="removeFilter('estado')" title="Remover estado">×</button>
+    </span>
+    {% endif %}
+    {% if sel_local %}
+    <span class="chip">Local: {% for l in locais %}{% if l.id|stringformat:"s" == sel_local %}{{ l.nome }}{% endif %}{% endfor %}
+      <button type="button" class="chip-x" onclick="removeFilter('local')" title="Remover local">×</button>
+    </span>
+    {% endif %}
+    <a href="{% url 'core:patrimonios_lista' %}" class="chips-clear">Limpar tudo</a>
+  </div>
+  {% endif %}
+
+</form>
+
+{# ── TABLE CARD (fora do filterForm para não aninhar forms) ─────────── #}
+<div class="table-card">
+
+  <div class="tbl-toolbar">
+    <span class="tbl-toolbar-info">
+      Mostrando <b>{{ page_obj.start_index }}–{{ page_obj.end_index }}</b>
+      de <b>{{ total_filtered }}</b> patrimônios
+    </span>
+    <div class="tbl-toolbar-right">
+      <button type="button" class="tbl-icon-btn" title="Atualizar" onclick="location.reload()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      </button>
+      <button type="button" class="tbl-icon-btn" title="Colunas"
+              onclick="GModal.alert('Colunas','Personalização de colunas disponível em breve.')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/></svg>
+      </button>
+      <button type="button" class="tbl-icon-btn" title="Alternar densidade" onclick="toggleDensity()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="bulk-bar" id="bulkBar">
+    <div class="bulk-bar-left">
+      <input type="checkbox" id="selAllBulk" title="Selecionar / desmarcar todos" onchange="selectAll(this.checked)">
+      <span class="bulk-count" id="bulkCount">0 selecionados</span>
+    </div>
+    <div class="bulk-bar-right">
+      <button type="button" class="bulk-btn" onclick="GModal.alert('Alterar estado','Disponível em breve.')">Alterar estado</button>
+      <button type="button" class="bulk-btn" onclick="GModal.alert('Atribuir local','Disponível em breve.')">Atribuir local</button>
+      <button type="button" class="bulk-btn" onclick="GModal.alert('Exportar','Disponível em breve.')">Exportar seleção</button>
+      <button type="button" class="bulk-btn danger"
+              onclick="GModal.confirm('Excluir seleção','Excluir os itens selecionados? Esta ação não pode ser desfeita.',()=>{},'Excluir')">Excluir</button>
+    </div>
+  </div>
+
+  <table class="pat-tbl">
+    <thead>
+      <tr>
+        <th style="width:38px"><input type="checkbox" id="selAllHeader" title="Selecionar todos" onchange="selectAll(this.checked)"></th>
+        <th class="sortable" style="width:60px">ID <span class="sort-ic">↕</span></th>
+        <th class="sortable sorted">Patrimônio <span class="sort-ic on">↑</span></th>
+        <th class="sortable col-sh">Nº Série <span class="sort-ic">↕</span></th>
+        <th class="sortable">Modelo <span class="sort-ic">↕</span></th>
+        <th class="sortable">Categoria <span class="sort-ic">↕</span></th>
+        <th class="sortable">Estado <span class="sort-ic">↕</span></th>
+        <th class="sortable col-lh">Local <span class="sort-ic">↕</span></th>
+        <th>Custodiante</th>
+        <th style="width:72px;text-align:right">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in ativos %}
+      <tr onclick="rowClick(this,event)">
+
+        <td onclick="event.stopPropagation()">
+          <input type="checkbox" class="row-chk" onchange="updateBulk()">
+        </td>
+
+        <td class="col-id">#{{ a.id|stringformat:"03d" }}</td>
+
+        <td>
+          <a href="{% url 'core:ativo_editar' a.id %}" class="col-pat" onclick="event.stopPropagation()">{{ a.patrimonio }}</a>
+        </td>
+
+        <td class="col-sd">
+          {% if a.numero_serie %}<span class="col-serie">{{ a.numero_serie }}</span>
+          {% else %}<span class="empty-cell">—</span>{% endif %}
+        </td>
+
+        <td class="col-modelo-cell" data-modelo="{{ a.modelo }}">{{ a.modelo }}</td>
+
+        <td>
+          <span class="cat-pill {% if a.categoria == 'Notebook' %}c-notebook{% elif a.categoria == 'Desktop' %}c-desktop{% elif a.categoria == 'Monitor' %}c-monitor{% elif a.categoria == 'Nobreak' %}c-nobreak{% elif a.categoria == 'Smartphone' %}c-smartphone{% elif a.categoria == 'Servidor' %}c-servidor{% elif a.categoria == 'Impressora' %}c-impressora{% elif a.categoria == 'Switch' %}c-switch{% else %}c-outro{% endif %}">
+            {% if a.categoria == 'Notebook' %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M0 21h24"/></svg>
+            {% elif a.categoria == 'Desktop' %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            {% elif a.categoria == 'Monitor' %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            {% elif a.categoria == 'Smartphone' %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+            {% elif a.categoria == 'Impressora' %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            {% elif a.categoria == 'Servidor' %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+            {% else %}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>{% endif %}
+            {{ a.categoria }}
+          </span>
+        </td>
+
+        <td>
+          <span class="est-badge {% if a.estado == 'em_uso' %}e-em_uso{% elif a.estado == 'estoque' %}e-estoque{% elif a.estado == 'manutencao' %}e-manutencao{% else %}e-descartado{% endif %}">
+            {{ a.get_estado_display }}
+          </span>
+        </td>
+
+        <td class="col-ld">
+          {% if a.local %}
+            <span class="col-local-inner">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              {{ a.local.nome }}
+            </span>
+          {% else %}<span class="empty-cell">—</span>{% endif %}
+        </td>
+
+        <td>
+          {% with custs=a.custodiantes.all %}
+          {% if custs %}
+            <div class="cust-wrap">
+              <span class="cust-av" data-name="{{ custs.0.nome }}">{{ custs.0.nome|slice:":1"|upper }}</span>
+              <span class="cust-name" title="{{ custs.0.nome }}">{{ custs.0.nome }}</span>
+            </div>
+          {% else %}<span class="empty-cell">—</span>{% endif %}
+          {% endwith %}
+        </td>
+
+        <td onclick="event.stopPropagation()">
+          <div class="tbl-act">
+            <a href="{% url 'core:ativo_editar' a.id %}" class="act-btn" title="Editar patrimônio">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19H4v-3L16.5 3.5z"/></svg>
+            </a>
+            <button type="button" class="act-btn del" title="Excluir patrimônio"
+                    onclick="deleteAtivo({{ a.id }},'{{ a.patrimonio|escapejs }}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
+        </td>
+
+      </tr>
+      {% empty %}
+      <tr><td colspan="10" class="tbl-empty">Nenhum patrimônio encontrado para esses filtros.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="pat-pag">
+    <div class="pag-info">
+      <span>Mostrando {{ page_obj.start_index }}–{{ page_obj.end_index }} de {{ total_filtered }}</span>
+      <span class="pag-per">
+        Linhas por página:
+        <select aria-label="Linhas por página" onchange="changePerPage(this.value)">
+          <option value="12"  {% if per_page == 12  %}selected{% endif %}>12</option>
+          <option value="25"  {% if per_page == 25  %}selected{% endif %}>25</option>
+          <option value="50"  {% if per_page == 50  %}selected{% endif %}>50</option>
+          <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+        </select>
+      </span>
+    </div>
+    <div class="pag-btns">
+      {% if page_obj.has_previous %}
+        <button class="pag-btn" onclick="goPage({{ page_obj.previous_page_number }})" title="Anterior">‹</button>
+      {% else %}
+        <button class="pag-btn" disabled title="Anterior">‹</button>
+      {% endif %}
+
+      {% for p in page_range %}
+        {% if p == -1 %}
+          <span class="pag-ellipsis">…</span>
+        {% elif p == page_obj.number %}
+          <button class="pag-btn act" aria-current="page">{{ p }}</button>
+        {% else %}
+          <button class="pag-btn" onclick="goPage({{ p }})">{{ p }}</button>
+        {% endif %}
+      {% endfor %}
+
+      {% if page_obj.has_next %}
+        <button class="pag-btn" onclick="goPage({{ page_obj.next_page_number }})" title="Próxima">›</button>
+      {% else %}
+        <button class="pag-btn" disabled title="Próxima">›</button>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ── Avatar: cor determinística pelo nome ── */
+const AV_COLORS = ['#2563eb','#16a34a','#7c3aed','#ea580c','#0891b2','#db2777','#ca8a04','#475569'];
+document.querySelectorAll('.cust-av[data-name]').forEach(el => {
+  const n = el.dataset.name;
+  let h = 0;
+  for (let i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) & 0xffff;
+  el.style.background = AV_COLORS[h % AV_COLORS.length];
+});
+
+/* ── Modelo: split brand + nome ── */
+function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+document.querySelectorAll('.col-modelo-cell').forEach(cell => {
+  const text = (cell.dataset.modelo || '').trim();
+  const sp   = text.indexOf(' ');
+  cell.innerHTML = sp > 0
+    ? `<span class="col-marca">${escHtml(text.slice(0,sp))}</span><span class="col-nmod">${escHtml(text.slice(sp+1))}</span>`
+    : `<span class="col-nmod">${escHtml(text)}</span>`;
+});
+
+/* ── Filter helpers ── */
+function resetPage() { document.getElementById('pageInput').value = 1; }
+function submitForm() { document.getElementById('filterForm').submit(); }
+function goPage(n)    { document.getElementById('pageInput').value = n; submitForm(); }
+
+function changePerPage(val) {
+  document.getElementById('perPageInput').value = val;
+  resetPage(); submitForm();
+}
+
+function syncCsLabel(sel, lblId, defaultText) {
+  const el = document.getElementById(lblId);
+  if (el) el.textContent = sel.value ? sel.options[sel.selectedIndex].text : defaultText;
+}
+
+function kpiClick(estado) {
+  const sel = document.getElementById('estadoSelect');
+  if (sel) { sel.value = estado; syncCsLabel(sel, 'lblEstado', 'Todos'); }
+  resetPage(); submitForm();
+}
+
+function removeFilter(key) {
+  const form = document.getElementById('filterForm');
+  const el   = form.elements[key];
+  if (el) el.value = '';
+  const maps = { estado:['lblEstado','Todos'], categoria:['lblCategoria','Todas'], local:['lblLocal','Todos'] };
+  if (maps[key]) { const [id,def] = maps[key]; const lbl = document.getElementById(id); if(lbl) lbl.textContent = def; }
+  resetPage(); submitForm();
+}
+
+/* ── ⌘K / Ctrl+K ── */
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault();
+    document.getElementById('searchInput')?.focus();
+  }
+});
+
+/* ── Row click → edit ── */
+function rowClick(tr, e) {
+  if (['A','BUTTON','INPUT','LABEL'].includes(e.target.tagName)) return;
+  const a = tr.querySelector('a.act-btn');
+  if (a) window.location.href = a.href;
+}
+
+/* ── Bulk ── */
+function updateBulk() {
+  const checks   = [...document.querySelectorAll('.row-chk')];
+  const selected = checks.filter(c => c.checked).length;
+  const bar      = document.getElementById('bulkBar');
+  bar.classList.toggle('on', selected > 0);
+  document.getElementById('bulkCount').textContent =
+    selected + ' selecionado' + (selected !== 1 ? 's' : '');
+  const allCbs = document.querySelectorAll('#selAllHeader,#selAllBulk');
+  allCbs.forEach(cb => {
+    cb.indeterminate = selected > 0 && selected < checks.length;
+    cb.checked = selected > 0 && selected === checks.length;
+  });
+  document.querySelectorAll('.pat-tbl tbody tr').forEach((tr, i) => {
+    tr.classList.toggle('sel', !!checks[i]?.checked);
+  });
+}
+function selectAll(checked) {
+  document.querySelectorAll('.row-chk').forEach(c => { c.checked = checked; });
+  document.querySelectorAll('#selAllHeader,#selAllBulk').forEach(cb => {
+    cb.checked = checked; cb.indeterminate = false;
+  });
+  updateBulk();
+}
+
+/* ── Density ── */
+function toggleDensity() { document.body.classList.toggle('dense'); }
+
+/* ── Delete via JS (evita forms aninhados) ── */
+function getCSRF() {
+  return document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+}
+function deleteAtivo(id, nome) {
+  GModal.confirm(
+    'Excluir ativo',
+    `Excluir ${nome}? Esta ação não pode ser desfeita.`,
+    () => {
+      const f    = document.createElement('form');
+      f.method   = 'post';
+      f.action   = `/cadastros/ativos/${id}/excluir/`;
+      const csrf = document.createElement('input');
+      csrf.type  = 'hidden';
+      csrf.name  = 'csrfmiddlewaretoken';
+      csrf.value = getCSRF();
+      f.appendChild(csrf);
+      document.body.appendChild(f);
+      f.submit();
+    },
+    'Excluir'
+  );
+}
+</script>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Editar Local{% endblock %}
+{% block topbar %}{% endblock %}
+
+{% block content %}
+
+{# ── Cabeçalho ── #}
+<div class="page-header">
+  <div>
+    <div class="page-breadcrumb">
+      <a href="{% url 'core:cad_locais' %}" style="color:var(--muted);text-decoration:none">← Locais</a>
+    </div>
+    <h1>Editar local</h1>
+  </div>
+</div>
+
+{# ── Card de edição ── #}
+<div class="lc-card">
+  <div class="lc-card-head">
+    <div id="lc-avatar" class="lc-avatar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 21s-6-5.2-6-10a6 6 0 1 1 12 0c0 4.8-6 10-6 10z"/>
+        <circle cx="12" cy="11" r="2.5"/>
+      </svg>
+    </div>
+    <div>
+      <div id="lc-title" class="lc-card-title">{{ local.nome }}</div>
+      <span id="lc-tipo-tag" class="lc-tipo-tag">{{ local.tipo }}</span>
+    </div>
+  </div>
+
+  <form method="post" id="lc-form">
+    {% csrf_token %}
+
+    {# ── Seção 1: Identificação ── #}
+    <div class="lc-section">
+      <div class="lc-section-title">
+        <span class="lc-section-num">1</span> Identificação
+      </div>
+      <div class="lc-grid">
+        <div class="fg{% if form.codigo.errors %} has-error{% endif %}">
+          <label for="{{ form.codigo.id_for_label }}">Código <span class="req">*</span></label>
+          {{ form.codigo }}
+          {% for e in form.codigo.errors %}<span class="lc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.nome.errors %} has-error{% endif %}">
+          <label for="{{ form.nome.id_for_label }}">Nome <span class="req">*</span></label>
+          {{ form.nome }}
+          {% for e in form.nome.errors %}<span class="lc-error">{{ e }}</span>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# ── Seção 2: Classificação & hierarquia ── #}
+    <div class="lc-section">
+      <div class="lc-section-title">
+        <span class="lc-section-num">2</span> Classificação &amp; hierarquia
+      </div>
+      <div class="lc-grid">
+        <div class="fg{% if form.tipo.errors %} has-error{% endif %}">
+          <label for="{{ form.tipo.id_for_label }}">Tipo <span class="req">*</span></label>
+          {{ form.tipo }}
+          {% for e in form.tipo.errors %}<span class="lc-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.pai.errors %} has-error{% endif %}">
+          <label for="{{ form.pai.id_for_label }}">Pai</label>
+          {{ form.pai }}
+          {% for e in form.pai.errors %}<span class="lc-error">{{ e }}</span>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {% if form.non_field_errors %}
+      <div class="lc-section" style="padding-top:0">
+        {% for e in form.non_field_errors %}<span class="lc-error">{{ e }}</span>{% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="lc-form-footer">
+      <span class="lc-required-note">* Campos obrigatórios</span>
+      <div class="lc-form-actions">
+        <a href="{% url 'core:cad_locais' %}" class="btn-link">Cancelar</a>
+        <button type="submit" class="btn">Atualizar local</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/locais.js' %}" defer></script>
+{% endblock %}

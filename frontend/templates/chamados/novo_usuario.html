@@ -1,0 +1,449 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Abrir Chamado{% endblock %}
+{% block topbar %}{% endblock %}
+
+{% block content %}
+<form id="chamado-form" method="post" enctype="multipart/form-data" action="{% url 'core:chamado_novo' %}">
+{% csrf_token %}
+
+{# ── Hero ── #}
+<div class="cf-hero">
+  <div>
+    <div class="cf-hero-id">Novo Registro</div>
+    <h2 class="cf-hero-title">Abrir Chamado</h2>
+    <p class="cf-hero-sub">
+      Preencha os campos para registrar sua solicitação.
+      Campos com <span class="cf-req">*</span> são obrigatórios.
+    </p>
+  </div>
+  <div class="cf-hero-meta">
+    <span>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a8.5 8.5 0 0 1 13 0"/></svg>
+      Solicitante: <strong>{{ user_nome }}</strong>
+    </span>
+    <span>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      {% now "d/m/Y · H:i" %}
+    </span>
+  </div>
+</div>
+
+{# ── Page grid ── #}
+<div class="cf-page">
+
+  {# ── Col main ── #}
+  <div class="cf-col-main">
+
+    {# ── Card 1: Detalhes ── #}
+    <div class="card ch-card">
+      <div class="ch-card-header">
+        <div class="cf-card-header-left">
+          <span class="cf-card-step" aria-hidden="true">1</span>
+          <span class="ch-card-title">Detalhes do chamado</span>
+        </div>
+        <span class="cf-card-sub">Identifique a solicitação</span>
+      </div>
+      <div class="cf-card-body">
+
+        {# Assunto #}
+        <div class="cf-form-group">
+          <label class="cf-form-label" for="id_assunto">Assunto <span class="cf-req">*</span></label>
+          <input
+            id="id_assunto" name="assunto" type="text"
+            class="cf-form-input" maxlength="120"
+            placeholder="Ex.: Meu notebook não está ligando"
+            autocomplete="off" required
+          >
+          <span class="cf-form-hint">Seja específico — um bom assunto agiliza o atendimento.</span>
+        </div>
+
+        {# Classificação #}
+        <div class="cf-form-group" id="classif-group">
+          <span class="cf-form-label">Classificação <span class="cf-req">*</span></span>
+          <div class="cf-form-row cols-2">
+            <div class="cf-select-wrap">
+              <select id="id_departamento" name="departamento" class="cf-form-select" aria-label="Departamento">
+                <option value="">— Selecione o Departamento —</option>
+                {% for dept in departamentos %}
+                <option value="{{ dept.pk }}">{{ dept.nome }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="cf-select-wrap">
+              <select id="id_topico" name="topico" class="cf-form-select" aria-label="Tópico" disabled>
+                <option value="">— Selecione um departamento primeiro —</option>
+              </select>
+            </div>
+          </div>
+          <div class="cf-classif-error" id="classif-error" role="alert">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+            </svg>
+            Selecione o departamento e o tópico para continuar.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    {# ── Card 2: Descrição ── #}
+    <div class="card ch-card">
+      <div class="ch-card-header">
+        <div class="cf-card-header-left">
+          <span class="cf-card-step" aria-hidden="true">2</span>
+          <span class="ch-card-title">Descrição e contexto</span>
+        </div>
+        <span class="cf-card-sub">Quanto mais detalhe, mais rápido resolvemos</span>
+      </div>
+      <div class="cf-card-body">
+
+        {# Equipamento (ativos do usuário) #}
+        <div class="cf-form-group">
+          <span class="cf-form-label">
+            Equipamento relacionado
+            <span class="cf-opt">opcional</span>
+          </span>
+          <input type="hidden" id="id_ativo" name="ativo">
+          {% if meus_ativos %}
+            <div class="cf-ativo-list" role="group" aria-label="Seus equipamentos">
+              {% for a in meus_ativos %}
+              <button
+                type="button"
+                class="cf-ativo-chip"
+                data-id="{{ a.pk }}"
+                data-label="{{ a.patrimonio }}{% if a.modelo %} — {{ a.modelo }}{% endif %}"
+                aria-pressed="false"
+              >
+                <span class="cf-ativo-chip-tag">{{ a.categoria|truncatechars:8 }}</span>
+                <span>
+                  <strong>{{ a.patrimonio }}</strong>
+                  {% if a.modelo %}<span style="color:var(--muted)"> — {{ a.modelo }}</span>{% endif %}
+                </span>
+              </button>
+              {% endfor %}
+            </div>
+            <span class="cf-form-hint">Clique para selecionar o equipamento envolvido. Clique novamente para desmarcar.</span>
+          {% else %}
+            <div class="cf-no-ativo">
+              Nenhum equipamento vinculado a você. Se o problema for em um equipamento específico, mencione o número do patrimônio na descrição abaixo.
+            </div>
+          {% endif %}
+        </div>
+
+        {# Descrição #}
+        <div class="cf-form-group">
+          <label class="cf-form-label" for="id_descricao">Descrição <span class="cf-req">*</span></label>
+          <div class="cf-desc-wrap">
+            <textarea
+              id="id_descricao" name="descricao" class="cf-form-textarea"
+              maxlength="2000" required
+              placeholder="Descreva o que está acontecendo. Quando começou? Aparece alguma mensagem de erro? Quanto mais detalhes, mais rápido conseguimos te ajudar."
+            ></textarea>
+            <div class="cf-desc-footer">
+              <span><strong id="char-count">0</strong> / 2000 caracteres</span>
+              <span>Seja detalhado — isso acelera a resolução</span>
+            </div>
+          </div>
+        </div>
+
+        {# Anexos #}
+        <div class="cf-form-group">
+          <span class="cf-form-label">Anexos <span class="cf-opt">opcional</span></span>
+          <label
+            class="cf-dropzone-label" id="dropzone-label"
+            for="id_anexos"
+            title="Clique ou arraste arquivos aqui"
+          >
+            <div class="cf-dropzone-icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+            </div>
+            <div class="cf-dropzone-title">
+              Arraste arquivos aqui ou <a>clique para selecionar</a>
+            </div>
+            <div class="cf-dropzone-sub">PNG, JPG, PDF, TXT — até 10 MB por arquivo</div>
+            <input
+              type="file" id="id_anexos" name="anexos" multiple
+              accept=".pdf,.jpg,.jpeg,.png,.txt"
+              style="display:none"
+              aria-label="Selecionar arquivos para anexar"
+            >
+          </label>
+          <div class="cf-attachment-list" id="attachment-list"></div>
+        </div>
+
+      </div>{# /card-body #}
+
+      {# Footer #}
+      <div class="cf-form-footer">
+        <div class="cf-footer-info">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+          </svg>
+          Ao abrir, você receberá confirmação com o número do chamado.
+        </div>
+        <div class="cf-footer-actions">
+          <a href="{% url 'core:meus_chamados' %}" class="cf-btn-cancel">Cancelar</a>
+          <button type="submit" class="cf-btn-submit">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Abrir Chamado
+          </button>
+        </div>
+      </div>
+
+    </div>{# /card 2 #}
+
+  </div>{# /col-main #}
+
+  {# ── Col side ── #}
+  <div class="cf-col-side">
+    <details class="cf-side-details" open>
+
+      {# Toggle visible only on mobile #}
+      <summary class="cf-side-toggle" aria-label="Dicas para abrir um bom chamado">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+        </svg>
+        Dicas para abrir um bom chamado
+        <span class="cf-side-chevron" aria-hidden="true">▾</span>
+      </summary>
+
+      {# Preview — hidden on mobile via CSS #}
+      <div class="card ch-card cf-side-preview">
+        <div class="ch-card-header">
+          <span class="ch-card-title">Pré-visualização</span>
+        </div>
+        <div class="cf-card-body">
+          <div class="cf-preview-id">CHAMADO #NOVO</div>
+          <div class="cf-preview-title empty" id="preview-title">Assunto do chamado…</div>
+          <div class="cf-preview-badges">
+            <span class="ch-badge ch-badge-blue">Aberto</span>
+            <span class="ch-badge ch-badge-gray" id="preview-departamento">Departamento</span>
+            <span class="ch-badge ch-badge-gray" id="preview-topico">Tópico</span>
+          </div>
+          <hr class="cf-preview-divider">
+          <div class="cf-preview-meta">
+            <div class="cf-preview-row">
+              <span class="cf-preview-label">Solicitante</span>
+              <span class="cf-preview-value">{{ user_nome }}</span>
+            </div>
+            <div class="cf-preview-row">
+              <span class="cf-preview-label">Equipamento</span>
+              <span class="cf-preview-value muted" id="preview-ativo">Nenhum</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# Dicas #}
+      <div class="card ch-card">
+        <div class="ch-card-header">
+          <span class="ch-card-title">Como abrir um bom chamado</span>
+        </div>
+        <div class="cf-card-body">
+
+          <div class="cf-tip">
+            <div class="cf-tip-icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="7"/><path d="m21 21-3.8-3.8"/>
+              </svg>
+            </div>
+            <p class="cf-tip-text"><strong>Seja específico no assunto.</strong> "Outlook não envia" é melhor que "problema no e-mail".</p>
+          </div>
+
+          <div class="cf-tip">
+            <div class="cf-tip-icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+              </svg>
+            </div>
+            <p class="cf-tip-text"><strong>Conte quando começou</strong> e o que mudou: atualização, novo programa, mudança de mesa.</p>
+          </div>
+
+          <div class="cf-tip">
+            <div class="cf-tip-icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+              </svg>
+            </div>
+            <p class="cf-tip-text"><strong>Anexe prints e logs</strong> sempre que possível. Imagem da tela de erro acelera muito a análise.</p>
+          </div>
+
+          <div class="cf-tip">
+            <div class="cf-tip-icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="12" rx="2"/><path d="M7 20h10"/>
+              </svg>
+            </div>
+            <p class="cf-tip-text"><strong>Informe o patrimônio</strong> do equipamento envolvido — está na etiqueta colada no aparelho.</p>
+          </div>
+
+        </div>
+      </div>
+
+    </details>
+  </div>{# /col-side #}
+
+</div>{# /cf-page #}
+</form>
+
+{# Close details on mobile before page paint #}
+<script>
+(function () {
+  var det = document.querySelector('.cf-side-details');
+  if (det && window.innerWidth < 768) det.removeAttribute('open');
+})();
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const TOPICOS_POR_DEPT = {{ topicos_json|safe }};
+
+  /* ── Refs ── */
+  const form        = document.getElementById('chamado-form');
+  const assuntoEl   = document.getElementById('id_assunto');
+  const deptEl      = document.getElementById('id_departamento');
+  const topicoEl    = document.getElementById('id_topico');
+  const classifErr  = document.getElementById('classif-error');
+  const ativoHidden = document.getElementById('id_ativo');
+  const descricaoEl = document.getElementById('id_descricao');
+  const charCount   = document.getElementById('char-count');
+  const fileInput   = document.getElementById('id_anexos');
+  const attachList  = document.getElementById('attachment-list');
+  const dropzone    = document.getElementById('dropzone-label');
+
+  const previewTitle  = document.getElementById('preview-title');
+  const previewDept   = document.getElementById('preview-departamento');
+  const previewTopico = document.getElementById('preview-topico');
+  const previewAtivo  = document.getElementById('preview-ativo');
+
+  /* ── Live preview ── */
+  function updatePreview() {
+    const assunto = assuntoEl.value.trim();
+    previewTitle.textContent = assunto || 'Assunto do chamado…';
+    previewTitle.classList.toggle('empty', !assunto);
+
+    const deptOpt = deptEl.options[deptEl.selectedIndex];
+    previewDept.textContent = (deptEl.value && deptOpt)
+      ? deptOpt.textContent.trim() : 'Departamento';
+
+    const topOpt = topicoEl.options[topicoEl.selectedIndex];
+    previewTopico.textContent = (topicoEl.value && topOpt)
+      ? topOpt.textContent.trim() : 'Tópico';
+  }
+
+  /* ── Dept → Tópico cascade ── */
+  deptEl.addEventListener('change', function () {
+    const topicos = TOPICOS_POR_DEPT[this.value] || [];
+    if (topicos.length) {
+      topicoEl.innerHTML = '<option value="">— Selecione o Tópico —</option>';
+      topicos.forEach(function (t) {
+        const o = document.createElement('option');
+        o.value = t.id;
+        o.textContent = t.nome;
+        topicoEl.appendChild(o);
+      });
+      topicoEl.disabled = false;
+    } else {
+      topicoEl.innerHTML = '<option value="">— Selecione um departamento primeiro —</option>';
+      topicoEl.disabled = true;
+    }
+    classifErr.classList.remove('visible');
+    updatePreview();
+  });
+
+  topicoEl.addEventListener('change', function () {
+    if (deptEl.value && this.value) classifErr.classList.remove('visible');
+    updatePreview();
+  });
+
+  assuntoEl.addEventListener('input', updatePreview);
+
+  /* ── Client-side validation ── */
+  form.addEventListener('submit', function (e) {
+    if (!deptEl.value || !topicoEl.value) {
+      e.preventDefault();
+      classifErr.classList.add('visible');
+      classifErr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      (deptEl.value ? topicoEl : deptEl).focus();
+    }
+  });
+
+  /* ── Char counter ── */
+  descricaoEl.addEventListener('input', function () {
+    charCount.textContent = this.value.length;
+  });
+
+  /* ── Ativo chips (user's assets) ── */
+  document.querySelectorAll('.cf-ativo-chip').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      const isSelected = this.classList.contains('selected');
+
+      document.querySelectorAll('.cf-ativo-chip').forEach(function (c) {
+        c.classList.remove('selected');
+        c.setAttribute('aria-pressed', 'false');
+      });
+
+      if (!isSelected) {
+        this.classList.add('selected');
+        this.setAttribute('aria-pressed', 'true');
+        ativoHidden.value = this.dataset.id;
+        if (previewAtivo) {
+          previewAtivo.textContent = this.dataset.label;
+          previewAtivo.classList.remove('muted');
+        }
+      } else {
+        ativoHidden.value = '';
+        if (previewAtivo) {
+          previewAtivo.textContent = 'Nenhum';
+          previewAtivo.classList.add('muted');
+        }
+      }
+    });
+  });
+
+  /* ── File attachments ── */
+  function extClass(name) { return 'ext-' + (name.split('.').pop() || '').toLowerCase(); }
+  function fmtSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+  function addAttachment(file) {
+    const ext  = (file.name.split('.').pop() || '').toUpperCase().slice(0, 4);
+    const item = document.createElement('div');
+    item.className = 'cf-attachment-item';
+    item.innerHTML =
+      '<div class="cf-attachment-icon ' + extClass(file.name) + '">' + ext + '</div>' +
+      '<span class="cf-attachment-name">' + file.name + '</span>' +
+      '<span class="cf-attachment-size">' + fmtSize(file.size) + '</span>' +
+      '<button type="button" class="cf-attachment-remove" title="Remover anexo" aria-label="Remover ' + file.name + '">&times;</button>';
+    item.querySelector('.cf-attachment-remove').addEventListener('click', function (e) {
+      e.preventDefault(); item.remove();
+    });
+    attachList.appendChild(item);
+  }
+
+  fileInput.addEventListener('change', function () {
+    Array.from(this.files).forEach(addAttachment);
+  });
+
+  dropzone.addEventListener('dragover',  function (e) { e.preventDefault(); this.classList.add('drag-over'); });
+  dropzone.addEventListener('dragleave', function ()  { this.classList.remove('drag-over'); });
+  dropzone.addEventListener('drop',      function (e) {
+    e.preventDefault(); this.classList.remove('drag-over');
+    Array.from(e.dataTransfer.files).forEach(addAttachment);
+  });
+
+  /* ── Init ── */
+  updatePreview();
+})();
+</script>
+{% endblock %}

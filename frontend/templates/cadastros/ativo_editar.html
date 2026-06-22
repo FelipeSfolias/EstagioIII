@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Editar Ativo — {{ ativo.patrimonio }}{% endblock %}
+{% block topbar %}{% endblock %}
+
+{% block content %}
+
+{# ── Cabeçalho ── #}
+<div class="page-header">
+  <div>
+    <div class="page-breadcrumb">
+      <a href="{% url 'core:cad_ativos' %}" style="color:inherit;text-decoration:none">Cadastros › Ativos</a> › Editar
+    </div>
+    <h1>Editar Ativo</h1>
+    <p class="page-subtitle">{{ ativo.patrimonio }} — {{ ativo.modelo }}</p>
+  </div>
+  <div style="align-self:center">
+    <a href="{% url 'core:cad_ativos' %}" class="btn-link">← Voltar</a>
+  </div>
+</div>
+
+{# ── Card de edição ── #}
+<div class="at-card">
+  <div class="at-card-head">
+    <div id="at-avatar" class="at-avatar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+        <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+      </svg>
+    </div>
+    <div>
+      <div id="at-title" class="at-card-title">{{ ativo.patrimonio }} — {{ ativo.modelo }}</div>
+      <span id="at-estado-tag" class="at-estado-tag">{{ ativo.get_estado_display }}</span>
+    </div>
+  </div>
+
+  <form method="post" id="at-form"
+        data-url-proximo="{% url 'core:ativo_proximo_patrimonio' %}"
+        data-url-custodiante="{% url 'core:funcionario_buscar' %}">
+    {% csrf_token %}
+
+    {# ── Seção 1: Identificação ── #}
+    <div class="at-section">
+      <div class="at-section-title">
+        <span class="at-section-num">1</span> Identificação
+      </div>
+      <div class="at-grid">
+        <div class="fg{% if form.patrimonio.errors %} has-error{% endif %}">
+          <label for="{{ form.patrimonio.id_for_label }}">Patrimônio <span class="req">*</span></label>
+          {{ form.patrimonio }}
+          {% for e in form.patrimonio.errors %}<span class="at-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.numero_serie.errors %} has-error{% endif %}">
+          <label for="{{ form.numero_serie.id_for_label }}">Número de Série</label>
+          {{ form.numero_serie }}
+          {% for e in form.numero_serie.errors %}<span class="at-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.modelo.errors %} has-error{% endif %}">
+          <label for="{{ form.modelo.id_for_label }}">Modelo <span class="req">*</span></label>
+          {{ form.modelo }}
+          {% for e in form.modelo.errors %}<span class="at-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.categoria.errors %} has-error{% endif %}">
+          <label for="{{ form.categoria.id_for_label }}">Categoria <span class="req">*</span></label>
+          {{ form.categoria }}
+          {% for e in form.categoria.errors %}<span class="at-error">{{ e }}</span>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# ── Seção 2: Situação & alocação ── #}
+    <div class="at-section">
+      <div class="at-section-title">
+        <span class="at-section-num">2</span> Situação &amp; alocação
+      </div>
+      <div class="at-grid">
+        <div class="fg{% if form.estado.errors %} has-error{% endif %}">
+          <label for="{{ form.estado.id_for_label }}">Estado <span class="req">*</span></label>
+          {{ form.estado }}
+          {% for e in form.estado.errors %}<span class="at-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg{% if form.local.errors %} has-error{% endif %}">
+          <label for="{{ form.local.id_for_label }}">Local</label>
+          {{ form.local }}
+          {% for e in form.local.errors %}<span class="at-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg fg-full">
+          <label for="id_custodiante_nome">Custodiante</label>
+          <div class="at-ac-wrap">
+            <input type="text" id="id_custodiante_nome" name="custodiante_nome"
+                   class="input-lite" placeholder="Pesquisar funcionário pelo nome..."
+                   autocomplete="off" role="combobox" aria-autocomplete="list"
+                   aria-controls="at-cust-listbox" aria-expanded="false"
+                   value="{% if custodiante_atual %}{{ custodiante_atual.nome }}{% endif %}">
+            <ul id="at-cust-listbox" role="listbox" class="at-cust-dropdown" hidden></ul>
+          </div>
+          <input type="hidden" name="custodiante_id" id="id_custodiante_id"
+                 value="{% if custodiante_atual %}{{ custodiante_atual.pk }}{% endif %}">
+        </div>
+      </div>
+    </div>
+
+    {% if form.non_field_errors %}
+      <div class="at-section" style="padding-top:0">
+        {% for e in form.non_field_errors %}<span class="at-error">{{ e }}</span>{% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="at-form-footer">
+      <span class="at-required-note">* Campos obrigatórios</span>
+      <div class="at-form-actions">
+        <a href="{% url 'core:cad_ativos' %}" class="btn-link">Cancelar</a>
+        <button type="submit" class="btn">Atualizar ativo</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/ativos.js' %}" defer></script>
+{% endblock %}
