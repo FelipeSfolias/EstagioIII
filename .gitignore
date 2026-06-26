@@ -6,3 +6,5 @@ media/
 logs/*.log
 .claude
 .env
+logs/.gitkeep
+db.sqlite3

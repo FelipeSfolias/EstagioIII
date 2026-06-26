@@ -10,7 +10,7 @@
 {# ── Hero ── #}
 <div class="cf-hero">
   <div>
-    <div class="cf-hero-id">Novo Registro</div>
+
     <h2 class="cf-hero-title">Abrir Chamado</h2>
     <p class="cf-hero-sub">
       Preencha os campos para registrar sua solicitação.
@@ -141,7 +141,8 @@
           <span class="cf-form-hint">Seja específico — um bom assunto agiliza a triagem.</span>
         </div>
 
-        {# Origem #}
+        {# Origem — visível apenas para admin/suporte #}
+        {% if is_privileged %}
         <div class="cf-form-group">
           <span class="cf-form-label">Origem <span class="cf-req">*</span></span>
           <div class="cf-origin-group" role="radiogroup" aria-label="Origem">
@@ -188,6 +189,9 @@
 
           </div>
         </div>
+        {% else %}
+        <input type="hidden" name="origem" value="portal">
+        {% endif %}
 
         {# Classificação: Departamento + Tópico #}
         <div class="cf-form-group" id="classif-group">
@@ -224,7 +228,8 @@
       </div>
     </div>
 
-    {# ── Card 2: Prioridade ── #}
+    {# ── Card 2: Prioridade — visível apenas para admin/suporte ── #}
+    {% if is_privileged %}
     <div class="card ch-card">
       <div class="ch-card-header">
         <div class="cf-card-header-left">
@@ -280,12 +285,15 @@
         </div>
       </div>
     </div>
+    {% else %}
+    <input type="hidden" name="prioridade" value="baixa">
+    {% endif %}
 
     {# ── Card 3: Descrição ── #}
     <div class="card ch-card">
       <div class="ch-card-header">
         <div class="cf-card-header-left">
-          <span class="cf-card-step" aria-hidden="true">3</span>
+          <span class="cf-card-step" aria-hidden="true">{% if is_privileged %}3{% else %}2{% endif %}</span>
           <span class="ch-card-title">Descrição e contexto</span>
         </div>
         <span class="cf-card-sub">Quanto mais detalhe, melhor</span>

@@ -173,11 +173,9 @@
       {% endif %}
 
       {% if messages %}
-        <div class="messages">
-          {% for m in messages %}
-            <div class="msg {{ m.tags }}">{{ m }}</div>
-          {% endfor %}
-        </div>
+      <script id="django-messages" type="application/json">
+      [{% for m in messages %}{"tags":"{{ m.tags|escapejs }}","text":"{{ m|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]
+      </script>
       {% endif %}
 
       {% block content %}{% endblock %}
@@ -204,11 +202,12 @@
   const GModal = {
     _WARN:  `<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16.5" r="1" fill="currentColor"/></svg>`,
     _TRASH: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/></svg>`,
+    _CHECK: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><path d="M7.5 12.5l3 3 6-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
 
     _open(type, title, body, actionsHTML) {
       const icon = document.getElementById('g-modal-icon');
       icon.className = 'g-modal-icon ' + type;
-      icon.innerHTML = type === 'danger' ? this._TRASH : this._WARN;
+      icon.innerHTML = type === 'danger' ? this._TRASH : type === 'success' ? this._CHECK : this._WARN;
       document.getElementById('g-modal-title').textContent = title;
       document.getElementById('g-modal-body').textContent  = body;
       document.getElementById('g-modal-actions').innerHTML = actionsHTML;
@@ -223,6 +222,11 @@
         `<button class="g-modal-btn g-modal-btn-primary" onclick="GModal.close()">Entendido</button>`);
     },
 
+    success(title, body) {
+      this._open('success', title, body,
+        `<button class="g-modal-btn g-modal-btn-success" onclick="GModal.close()">OK</button>`);
+    },
+
     confirm(title, body, target, label) {
       this._open('danger', title, body,
         `<button class="g-modal-btn g-modal-btn-cancel" onclick="GModal.close()">Cancelar</button>
@@ -235,6 +239,21 @@
     },
   };
   document.addEventListener('keydown', e => { if (e.key === 'Escape') GModal.close(); });
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const el = document.getElementById('django-messages');
+    if (!el) return;
+    try {
+      const msgs = JSON.parse(el.textContent);
+      const successes = msgs.filter(m => m.tags.includes('success'));
+      const errors    = msgs.filter(m => m.tags.includes('error'));
+      if (errors.length) {
+        GModal.alert('Atenção', errors.map(m => m.text).join('\n'));
+      } else if (successes.length) {
+        GModal.success('Concluído', successes.map(m => m.text).join('\n'));
+      }
+    } catch (e) {}
+  });
   </script>
 
   {% block extra_js %}{% endblock %}

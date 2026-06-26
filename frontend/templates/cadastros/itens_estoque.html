@@ -8,15 +8,12 @@
 {# ── Cabeçalho ── #}
 <div class="page-header">
   <div>
-    <div class="page-breadcrumb">Cadastros › Itens de Estoque</div>
     <h1>
       Itens de Estoque
-      <span class="chip">{{ total_itens }}</span>
       {% if alerta_count %}
         <span class="chip es-chip-alert">{{ alerta_count }} abaixo do mínimo</span>
       {% endif %}
     </h1>
-    <p class="page-subtitle">Gerencie materiais, suprimentos e itens de estoque.</p>
   </div>
 </div>
 
@@ -45,11 +42,6 @@
         <span class="es-section-num">1</span> Identificação
       </div>
       <div class="es-grid">
-        <div class="fg{% if form.sku.errors %} has-error{% endif %}">
-          <label for="{{ form.sku.id_for_label }}">SKU <span class="req">*</span></label>
-          {{ form.sku }}
-          {% for e in form.sku.errors %}<span class="es-error">{{ e }}</span>{% endfor %}
-        </div>
         <div class="fg{% if form.nome.errors %} has-error{% endif %}">
           <label for="{{ form.nome.id_for_label }}">Nome <span class="req">*</span></label>
           {{ form.nome }}
@@ -117,7 +109,7 @@
     </div>
     <form method="get" class="es-filters">
       <input class="input-lite" type="text" name="q" value="{{ request.GET.q }}"
-             placeholder="SKU ou nome...">
+             placeholder="Nome do item...">
       <select name="unidade" class="input-lite">
         <option value="">Unidade</option>
         {% for u in unidades %}
@@ -156,7 +148,6 @@
               <div class="es-avatar-sm" data-status="{{ i.status_estoque }}"></div>
               <div>
                 <div class="es-cell-name">{{ i.nome }}</div>
-                <code class="es-cell-sku">{{ i.sku }}</code>
               </div>
             </div>
           </td>

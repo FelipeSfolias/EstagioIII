@@ -207,9 +207,8 @@ class AtivoForm(forms.ModelForm):
 class ItemEstoqueForm(forms.ModelForm):
     class Meta:
         model = ItemEstoque
-        fields = ["sku", "nome", "unidade", "nivel_minimo", "qtde"]
+        fields = ["nome", "unidade", "nivel_minimo", "qtde"]
         widgets = {
-            "sku":  forms.TextInput(attrs={"placeholder": "Ex: CAB-RJ45"}),
             "nome": forms.TextInput(attrs={"placeholder": "Ex: Cabo de Rede RJ45 2m"}),
         }
 

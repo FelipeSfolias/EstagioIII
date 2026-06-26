@@ -521,3 +521,164 @@
   /* O "Novo Chamado" deixa de empurrar a barra: alinha à esquerda na quebra. */
   .cl-nav > div[style*="margin-left:auto"] { margin-left: 0 !important; }
 }
+
+/* ── Meus Chamados — portal do colaborador (mc-*) ── */
+
+.mc-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.mc-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -.4px;
+  color: var(--text);
+  margin: 0 0 2px;
+}
+.mc-subtitle {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* Pills de status */
+.mc-pills-bar {
+  display: flex;
+  gap: 8px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  flex-wrap: wrap;
+}
+.mc-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  transition: border-color .12s, background .12s, color .12s;
+  white-space: nowrap;
+}
+.mc-pill:hover { border-color: #cdd3dd; color: var(--text); }
+.mc-pill.active {
+  border-color: var(--blue);
+  background: var(--blue-light);
+  color: var(--blue);
+}
+.mc-pill-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.mc-pill-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--bg);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.mc-pill.active .mc-pill-count {
+  background: rgba(37,99,235,.12);
+  color: var(--blue);
+}
+
+/* Barra de busca + ordenação */
+.mc-searchbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.mc-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  white-space: nowrap;
+  background: var(--surface);
+  transition: border-color .12s, color .12s;
+  flex-shrink: 0;
+}
+.mc-sort-btn:hover { border-color: #cdd3dd; color: var(--text); }
+
+/* Coluna Status */
+.mc-col-status { width: 145px; }
+
+/* Bolinha dentro do badge de status */
+.mc-bdot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 5px;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+/* Célula do Agente */
+.mc-agente {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+.mc-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--blue-light);
+  color: var(--blue);
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+.mc-no-agente { color: var(--muted); font-size: 12.5px; }
+
+/* Empty state */
+.mc-empty-cell { text-align: center !important; padding: 56px 24px !important; }
+.mc-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.mc-empty-ico { margin-bottom: 6px; opacity: .55; }
+.mc-empty-title { font-size: 15px; font-weight: 700; color: var(--text); margin: 0; }
+.mc-empty-sub { font-size: 13px; color: var(--muted); margin: 0; }
+.mc-empty-sub a { color: var(--blue); text-decoration: none; }
+.mc-empty-sub a:hover { text-decoration: underline; }
+
+/* Responsivo */
+@media (max-width: 800px) {
+  .mc-topbar,
+  .mc-pills-bar,
+  .mc-searchbar { padding-left: 12px; padding-right: 12px; }
+  .mc-col-status { display: none; }
+}
+@media (max-width: 560px) {
+  .mc-pills-bar { gap: 6px; }
+  .mc-pill { flex: 1 1 auto; justify-content: center; }
+}

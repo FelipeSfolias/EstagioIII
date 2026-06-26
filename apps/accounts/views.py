@@ -1,13 +1,16 @@
 import logging
-import secrets
-import time
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView
 from django.core.cache import cache
+from django.core.mail import send_mail
 from django.shortcuts import render, redirect
+from django.urls import reverse
+
+from .models import PasswordResetToken
 
 logger = logging.getLogger(__name__)
 
@@ -39,78 +42,71 @@ def password_reset_start(request):
         cache.set(rate_key, count + 1, 900)
 
         email = request.POST.get("email", "").strip()
-        code = f"{secrets.randbelow(1_000_000):06d}"
-        request.session["pwd_reset_email"] = email
-        request.session["pwd_reset_code"] = code
-        request.session["pwd_reset_expires"] = time.time() + 600
-        request.session["pwd_reset_attempts"] = 0
         logger.info("Solicitação de reset para email=%s ip=%s", email, ip)
-        messages.info(request, "Enviamos um código de verificação para seu e-mail.")
-        return redirect("accounts:password_reset_code")
+
+        user = User.objects.filter(email__iexact=email).first()
+        if user:
+            token_obj = PasswordResetToken.create_for_user(user)
+            reset_url = request.build_absolute_uri(
+                reverse("accounts:password_reset_confirm", kwargs={"token": token_obj.token})
+            )
+            try:
+                send_mail(
+                    subject="Recuperação de senha — SIGCPC",
+                    message=(
+                        f"Olá, {user.get_full_name() or user.username}!\n\n"
+                        f"Recebemos uma solicitação para redefinir a senha da sua conta.\n\n"
+                        f"Clique no link abaixo para criar uma nova senha:\n{reset_url}\n\n"
+                        f"Este link expira em 1 hora. Após isso, solicite um novo link.\n\n"
+                        f"Se você não solicitou a recuperação de senha, ignore este e-mail."
+                    ),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[email],
+                    fail_silently=False,
+                )
+                logger.info("E-mail de reset enviado para %s", email)
+            except Exception as exc:
+                logger.error("Falha ao enviar e-mail de reset para %s: %s", email, exc)
+                messages.error(request, "Erro ao enviar o e-mail. Tente novamente mais tarde.")
+                return render(request, "registration/password_reset_start.html")
+
+        # Mesma mensagem com ou sem usuário cadastrado (evita enumeração de e-mails)
+        messages.info(request, "Se o e-mail estiver cadastrado, você receberá um link em instantes.")
+        return redirect("accounts:password_reset_start")
+
     return render(request, "registration/password_reset_start.html")
 
 
-_RESET_SESSION_KEYS = (
-    "pwd_reset_email", "pwd_reset_code", "pwd_reset_expires", "pwd_reset_attempts",
-)
+def password_reset_confirm(request, token):
+    token_obj = PasswordResetToken.objects.select_related("user").filter(token=token).first()
 
-
-def _clear_reset_session(session):
-    for k in _RESET_SESSION_KEYS:
-        session.pop(k, None)
-
-
-def password_reset_code(request):
-    # Bloquear sessões com excesso de tentativas antes de qualquer outra verificação
-    blocked_until = request.session.get("pwd_reset_blocked_until", 0)
-    if time.time() < float(blocked_until):
-        remaining = max(int((float(blocked_until) - time.time()) / 60) + 1, 1)
-        messages.error(request, f"Muitas tentativas incorretas. Aguarde {remaining} minuto(s).")
-        return redirect("accounts:password_reset_start")
-
-    email = request.session.get("pwd_reset_email")
-    code_expected = request.session.get("pwd_reset_code")
-    expires = request.session.get("pwd_reset_expires", 0)
-
-    if not email or not code_expected:
-        messages.error(request, "Sessão expirada. Solicite novamente.")
+    if not token_obj or not token_obj.is_valid():
+        messages.error(request, "Link inválido ou expirado. Solicite um novo link de recuperação.")
         return redirect("accounts:password_reset_start")
 
     if request.method == "POST":
-        code = request.POST.get("code", "").strip()
         p1 = request.POST.get("password1", "")
         p2 = request.POST.get("password2", "")
 
-        if time.time() > float(expires):
-            messages.error(request, "Código expirado. Solicite novamente.")
-            _clear_reset_session(request.session)
-            return redirect("accounts:password_reset_start")
+        if len(p1) < 8:
+            messages.error(request, "A senha deve ter pelo menos 8 caracteres.")
+            return render(request, "registration/password_reset_confirm.html", {"token": token})
 
-        if code != code_expected:
-            attempts = request.session.get("pwd_reset_attempts", 0) + 1
-            request.session["pwd_reset_attempts"] = attempts
-            if attempts >= 5:
-                request.session["pwd_reset_blocked_until"] = time.time() + 900
-                _clear_reset_session(request.session)
-                messages.error(request, "Muitas tentativas incorretas. Aguarde 15 minutos.")
-                return redirect("accounts:password_reset_start")
-            messages.error(request, "Código inválido.")
-            return render(request, "registration/password_reset_code.html")
-
-        if not p1 or p1 != p2:
+        if p1 != p2:
             messages.error(request, "As senhas não conferem.")
-            return render(request, "registration/password_reset_code.html")
+            return render(request, "registration/password_reset_confirm.html", {"token": token})
 
-        user = User.objects.filter(email__iexact=email).first()
-        _clear_reset_session(request.session)
-        if user:
-            user.set_password(p1)
-            user.save()
-        # Mesma mensagem em ambos os casos para não revelar se e-mail existe
-        messages.info(request, "Se o e-mail estiver cadastrado, a senha foi redefinida.")
+        user = token_obj.user
+        user.set_password(p1)
+        user.save()
+        token_obj.used = True
+        token_obj.save(update_fields=["used"])
+        logger.info("Senha redefinida com sucesso para user=%s", user.username)
+
+        messages.info(request, "Senha redefinida com sucesso! Faça login com a nova senha.")
         return redirect("accounts:login")
 
-    return render(request, "registration/password_reset_code.html")
+    return render(request, "registration/password_reset_confirm.html", {"token": token})
 
 
 @login_required

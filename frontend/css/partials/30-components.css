@@ -24,8 +24,9 @@
   display: flex; align-items: center; justify-content: center;
   margin: 0 auto 16px;
 }
-.g-modal-icon.alert  { background: var(--orange-light); color: var(--orange); }
-.g-modal-icon.danger { background: var(--red-light);    color: var(--red);    }
+.g-modal-icon.alert   { background: var(--orange-light); color: var(--orange); }
+.g-modal-icon.danger  { background: var(--red-light);    color: var(--red);    }
+.g-modal-icon.success { background: var(--green-light);  color: var(--green);  }
 .g-modal-title { font-size: 16px; font-weight: 800; color: var(--text); margin-bottom: 8px; letter-spacing: -.3px; }
 .g-modal-body  { font-size: 13px; color: var(--muted); line-height: 1.55; margin-bottom: 24px; }
 .g-modal-actions { display: flex; gap: 8px; justify-content: center; }
@@ -37,9 +38,10 @@
 }
 .g-modal-btn:hover { filter: brightness(.92); }
 .g-modal-btn:focus-visible { outline: 3px solid #93c5fd; outline-offset: 2px; }
-.g-modal-btn-cancel  { background: var(--bg); color: var(--muted); border: 1px solid var(--line) !important; }
-.g-modal-btn-primary { background: var(--blue); color: #fff; }
-.g-modal-btn-danger  { background: var(--red);  color: #fff; }
+.g-modal-btn-cancel  { background: var(--bg);    color: var(--muted); border: 1px solid var(--line) !important; }
+.g-modal-btn-primary { background: var(--blue);  color: #fff; }
+.g-modal-btn-danger  { background: var(--red);   color: #fff; }
+.g-modal-btn-success { background: var(--green); color: #fff; }
 
 /* Cards e grids */
 .card{

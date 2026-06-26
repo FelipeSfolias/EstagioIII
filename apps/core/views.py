@@ -35,13 +35,7 @@ from .forms import (
     LocalForm,
     ResponderChamadoForm,
 )
-from .mock_data import (
-    MOCK_PROJETOS,
-    proj_kpis,
-    proj_por_area,
-    proj_por_responsavel,
-    proj_por_status_segments,
-)
+from .mock_data import MOCK_PROJETOS
 
 # ============================================================
 # CONSTANTES / HELPERS
@@ -489,9 +483,7 @@ def cad_itens_estoque(request):
 
     qs = ItemEstoque.objects.all()
     if q:
-        qs = qs.filter(
-            db_models.Q(sku__icontains=q) | db_models.Q(nome__icontains=q)
-        )
+        qs = qs.filter(nome__icontains=q)
     if f_uni:
         qs = qs.filter(unidade__iexact=f_uni)
     if f_status == "esgotado":
@@ -1364,11 +1356,14 @@ def colaborador_buscar(request):
 def chamado_criar_tier(request):
     depts, topicos_json = _build_dept_context()
     is_admin = _is_admin(request.user)
+    is_privileged = request.user.is_superuser or request.user.groups.filter(
+        name__in=["admin", "suporte"]
+    ).exists()
 
     if request.method == "POST":
         assunto        = (request.POST.get("assunto")       or "").strip()
-        origem         = (request.POST.get("origem")        or "portal").strip()
-        prioridade     = (request.POST.get("prioridade")    or "baixa").strip()
+        origem         = "portal" if not is_privileged else (request.POST.get("origem") or "portal").strip()
+        prioridade     = "baixa"  if not is_privileged else (request.POST.get("prioridade") or "baixa").strip()
         descricao      = (request.POST.get("descricao")     or "").strip()
         dept_id        = (request.POST.get("departamento")  or "").strip()
         topico_id      = (request.POST.get("topico")        or "").strip()
@@ -1439,8 +1434,9 @@ def chamado_criar_tier(request):
         "departamentos":   depts,
         "topicos_json":    json.dumps(topicos_json),
         "ativos_recentes": ativos_recentes,
-        "user_nome": request.user.get_full_name() or request.user.username,
-        "is_admin":  is_admin,
+        "user_nome":       request.user.get_full_name() or request.user.username,
+        "is_admin":        is_admin,
+        "is_privileged":   is_privileged,
     })
 
 
@@ -1565,7 +1561,7 @@ def _lista_contexto(request, qs, titulo, aba, ordem_default="-atualizado_em"):
 @login_required
 @tier_required("suporte", "admin")
 def chamados_todos(request):
-    qs = Chamado.objects.select_related("aberto_por", "agente") \
+    qs = Chamado.objects.select_related("aberto_por", "agente", "departamento") \
                         .exclude(status__in=["resolvido", "fechado"])
     ctx = _lista_contexto(request, qs, "Abertos", "abertos")
     return render(request, "chamados/todos.html", ctx)
@@ -1574,7 +1570,7 @@ def chamados_todos(request):
 @login_required
 @tier_required("suporte", "admin")
 def chamados_todos_meus(request):
-    qs = Chamado.objects.select_related("aberto_por", "agente") \
+    qs = Chamado.objects.select_related("aberto_por", "agente", "departamento") \
                         .filter(agente=request.user) \
                         .exclude(status__in=["resolvido", "fechado"])
     ctx = _lista_contexto(request, qs, "Meus Tickets", "meus")
@@ -1595,7 +1591,7 @@ def chamados_todos_fechados(request):
         "ano":       hoje.replace(month=1, day=1),
     }
     inicio = datas.get(periodo, datas["mes"])
-    qs = Chamado.objects.select_related("aberto_por", "agente") \
+    qs = Chamado.objects.select_related("aberto_por", "agente", "departamento") \
                         .filter(status__in=["resolvido", "fechado"],
                                 fechado_em__date__gte=inicio)
     ctx = _lista_contexto(request, qs, "Fechados", "fechados", ordem_default="-fechado_em")
@@ -1639,17 +1635,52 @@ def chamado_acao_massa(request):
 @login_required
 @tier_required("colaborador", "suporte", "admin")
 def meus_chamados(request):
-    is_privileged = request.user.is_superuser or request.user.groups.filter(
-        name__in=["admin", "suporte"]
-    ).exists()
+    _GRUPO = {
+        "aberto":         ["aberto"],
+        "em_atendimento": ["em_atendimento"],
+        "fechado":        ["resolvido", "fechado"],
+    }
 
-    qs = Chamado.objects.select_related("aberto_por", "agente")
-    if not is_privileged:
-        qs = qs.filter(aberto_por=request.user)
+    base = (Chamado.objects
+            .filter(aberto_por=request.user)
+            .select_related("agente", "departamento"))
 
-    ctx = _lista_contexto(request, qs, "Meus Chamados", "meus_chamados")
-    ctx["is_privileged"] = is_privileged
-    return render(request, "chamados/meus.html", ctx)
+    contagens = {
+        "aberto":         base.filter(status__in=_GRUPO["aberto"]).count(),
+        "em_atendimento": base.filter(status__in=_GRUPO["em_atendimento"]).count(),
+        "fechado":        base.filter(status__in=_GRUPO["fechado"]).count(),
+        "total":          base.count(),
+    }
+
+    filtro = request.GET.get("filtro", "aberto")
+    qs = base.filter(status__in=_GRUPO[filtro]) if filtro in _GRUPO else base
+
+    q = request.GET.get("q", "").strip()
+    if q:
+        qs = qs.filter(
+            db_models.Q(assunto__icontains=q)
+            | db_models.Q(departamento__nome__icontains=q)
+            | db_models.Q(agente__first_name__icontains=q)
+            | (db_models.Q(pk=int(q)) if q.isdigit() else db_models.Q())
+        )
+
+    ordem = request.GET.get("ordem", "recentes")
+    qs = qs.order_by("-id" if ordem == "recentes" else "id")
+    qs = qs.annotate(
+        total_respostas=db_models.Count(
+            "historico", filter=db_models.Q(historico__tipo="comentario")
+        )
+    )
+
+    page_obj = Paginator(qs, 15).get_page(request.GET.get("page"))
+
+    return render(request, "chamados/meus_chamados.html", {
+        "page_obj":  page_obj,
+        "contagens": contagens,
+        "filtro":    filtro,
+        "ordem":     ordem,
+        "q":         q,
+    })
 
 
 def _calcular_sla(chamado):
@@ -2095,6 +2126,28 @@ def kanban_lista_criar(request, quadro_id):
 # ============================================================
 # COLABORADOR ONLY
 
+def _criar_chamado_ia(user, args):
+    """Cria um Chamado a partir dos args retornados pelo function call do Gemini."""
+    from .models import Chamado, Departamento, Topico
+
+    dep_nome = (args.get("departamento") or "").strip()
+    top_nome = (args.get("topico") or "").strip()
+
+    dep_obj = Departamento.objects.filter(nome__iexact=dep_nome, ativo=True).first() if dep_nome else None
+    top_qs = Topico.objects.filter(nome__iexact=top_nome, ativo=True)
+    top_obj = (top_qs.filter(departamento=dep_obj).first() if dep_obj else top_qs.first()) if top_nome else None
+
+    return Chamado.objects.create(
+        assunto=(args.get("assunto") or "Chamado via assistente")[:120],
+        descricao=args.get("descricao") or "",
+        origem="portal",
+        prioridade=args.get("prioridade") or "media",
+        aberto_por=user,
+        departamento=dep_obj,
+        topico=top_obj,
+    )
+
+
 @login_required
 @tier_required("colaborador")
 def assistente(request):
@@ -2116,61 +2169,229 @@ def assistente(request):
 @tier_required("colaborador")
 @require_POST
 def assistente_responder(request):
+    import json as _json
     try:
-        data = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
+        data = _json.loads(request.body)
+    except (_json.JSONDecodeError, ValueError):
         return JsonResponse({"error": "JSON inválido"}, status=400)
 
-    # Limpa histórico ao iniciar nova conversa
     if data.get("action") == "clear":
         request.session.pop("chat_history", None)
         return JsonResponse({"ok": True})
 
-    user_text = data.get("text", "").strip()
-    if not user_text:
+    user_text  = (data.get("text") or "").strip()
+    image_b64  = (data.get("image_b64") or "").strip()
+    image_mime = data.get("image_mime") or "image/png"
+
+    if not user_text and not image_b64:
         return JsonResponse({"error": "Texto vazio"}, status=400)
 
-    from django.conf import settings as django_settings
-    api_key = getattr(django_settings, "GEMINI_API_KEY", "")
-    if not api_key:
+    from django.conf import settings as _cfg
+    groq_key   = getattr(_cfg, "GROQ_API_KEY",   "")
+    gemini_key = getattr(_cfg, "GEMINI_API_KEY",  "")
+
+    if not groq_key and not gemini_key:
         return JsonResponse({
-            "html": "<p>O assistente de IA não está configurado. Configure a variável <code>GEMINI_API_KEY</code> no arquivo <code>.env</code>.</p>",
+            "html": "<p>Nenhuma chave de API configurada. Adicione <code>GROQ_API_KEY</code> ou <code>GEMINI_API_KEY</code> no arquivo <code>.env</code>.</p>",
+            "chips": [],
+        })
+
+    # Definição da ferramenta (formato OpenAI, compatível com Groq)
+    TOOL_DEF = {
+        "type": "function",
+        "function": {
+            "name": "criar_chamado",
+            "description": (
+                "Cria um chamado de suporte TI no SIGCPC em nome do colaborador. "
+                "Use SOMENTE após coletar assunto claro, descrição detalhada e confirmação "
+                "explícita do usuário. Nunca invente dados."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "assunto":      {"type": "string", "description": "Título curto (máx 120 chars)"},
+                    "descricao":    {"type": "string", "description": "Descrição detalhada do problema"},
+                    "prioridade":   {"type": "string", "enum": ["baixa", "media", "alta", "critica"],
+                                     "description": "baixa=não impede, media=atrapalha, alta=bloqueia, critica=parado"},
+                    "departamento": {"type": "string", "description": "Nome exato do departamento"},
+                    "topico":       {"type": "string", "description": "Nome exato do tópico"},
+                },
+                "required": ["assunto", "descricao", "prioridade"],
+            },
+        },
+    }
+
+    history       = request.session.get("chat_history", [])
+    system_prompt = montar_system_prompt(request)
+    history_user  = user_text or "[imagem anexada]"
+
+    def _save_history(reply):
+        history.append({"role": "user",      "content": history_user})
+        history.append({"role": "assistant",  "content": reply})
+        request.session["chat_history"] = history[-20:]
+
+    def _chamado_response(chamado_obj, reply_html):
+        _save_history(reply_html)
+        try:
+            from django.urls import reverse as _rev
+            url = _rev("core:chamado_detalhe", args=[chamado_obj.pk])
+        except Exception:
+            url = ""
+        return JsonResponse({
+            "html": reply_html, "chips": [],
+            "chamado_criado": {
+                "id": chamado_obj.pk, "assunto": chamado_obj.assunto,
+                "prioridade": chamado_obj.prioridade, "url": url,
+            },
+        })
+
+    # ── GROQ (primário — texto sem imagem) ─────────────────────────────────
+    if groq_key and not image_b64:
+        try:
+            from groq import Groq as _Groq
+
+            msgs = [{"role": "system", "content": system_prompt}]
+            for m in history:
+                role = "assistant" if m.get("role") == "model" else m.get("role", "user")
+                text = m.get("content") or (m.get("parts") or [""])[0]
+                msgs.append({"role": role, "content": text})
+            msgs.append({"role": "user", "content": user_text})
+
+            gc = _Groq(api_key=groq_key)
+            resp = gc.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=msgs,
+                tools=[TOOL_DEF],
+                tool_choice="auto",
+                max_tokens=800,
+            )
+            choice = resp.choices[0]
+
+            if choice.finish_reason == "tool_calls" and choice.message.tool_calls:
+                tc       = choice.message.tool_calls[0]
+                args     = _json.loads(tc.function.arguments)
+                chamado  = _criar_chamado_ia(request.user, args)
+                msgs.append({"role": "assistant", "content": None, "tool_calls": [tc]})
+                msgs.append({"role": "tool", "tool_call_id": tc.id,
+                              "content": _json.dumps({"chamado_id": chamado.pk, "status": "criado com sucesso"})})
+                final = gc.chat.completions.create(
+                    model="llama-3.3-70b-versatile", messages=msgs, max_tokens=400,
+                )
+                return _chamado_response(chamado, final.choices[0].message.content or "")
+
+            reply_html = choice.message.content or ""
+            _save_history(reply_html)
+            return JsonResponse({"html": reply_html, "chips": []})
+
+        except Exception as groq_exc:
+            err = str(groq_exc)
+            if "401" in err or "invalid_api_key" in err.lower():
+                return JsonResponse({
+                    "html": "<p>Chave Groq inválida. Verifique <code>GROQ_API_KEY</code> no <code>.env</code>.</p>",
+                    "chips": [],
+                })
+            logger.warning("Groq falhou (%s) — usando Gemini como fallback", err[:120])
+            if not gemini_key:
+                return JsonResponse({
+                    "html": "<p>Serviço IA indisponível. Configure <code>GEMINI_API_KEY</code> como fallback no <code>.env</code>.</p>",
+                    "chips": ["Tentar novamente"],
+                })
+
+    # ── GEMINI (fallback + imagens) ────────────────────────────────────────
+    if not gemini_key:
+        return JsonResponse({
+            "html": "<p>Nenhuma chave de API disponível. Configure <code>GROQ_API_KEY</code> ou <code>GEMINI_API_KEY</code> no <code>.env</code>.</p>",
             "chips": [],
         })
 
     try:
+        import base64 as _b64
         from google import genai
-        from google.genai import types as genai_types
+        from google.genai import types as gt
 
-        client = genai.Client(api_key=api_key)
+        gc = genai.Client(api_key=gemini_key)
 
-        # Reconstrói histórico como objetos Content
-        history = request.session.get("chat_history", [])
-        contents = [
-            genai_types.Content(role=msg["role"], parts=[genai_types.Part(text=msg["parts"][0])])
-            for msg in history
-        ]
-        contents.append(genai_types.Content(role="user", parts=[genai_types.Part(text=user_text)]))
+        contents = []
+        for m in history:
+            role = "model" if m.get("role") == "assistant" else m.get("role", "user")
+            txt  = m.get("content") or (m.get("parts") or [""])[0]
+            contents.append(gt.Content(role=role, parts=[gt.Part(text=txt)]))
 
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
-            contents=contents,
-            config=genai_types.GenerateContentConfig(
-                system_instruction=montar_system_prompt(request),
-                max_output_tokens=800,
+        user_parts = []
+        if user_text:
+            user_parts.append(gt.Part(text=user_text))
+        if image_b64:
+            user_parts.append(gt.Part(
+                inline_data=gt.Blob(mime_type=image_mime, data=_b64.b64decode(image_b64))
+            ))
+        contents.append(gt.Content(role="user", parts=user_parts))
+
+        decl = gt.FunctionDeclaration(
+            name="criar_chamado",
+            description=TOOL_DEF["function"]["description"],
+            parameters=gt.Schema(
+                type=gt.Type.OBJECT,
+                properties={
+                    "assunto":      gt.Schema(type=gt.Type.STRING),
+                    "descricao":    gt.Schema(type=gt.Type.STRING),
+                    "prioridade":   gt.Schema(type=gt.Type.STRING, enum=["baixa", "media", "alta", "critica"]),
+                    "departamento": gt.Schema(type=gt.Type.STRING),
+                    "topico":       gt.Schema(type=gt.Type.STRING),
+                },
+                required=["assunto", "descricao", "prioridade"],
             ),
         )
+        cfg = gt.GenerateContentConfig(
+            system_instruction=system_prompt,
+            tools=[gt.Tool(function_declarations=[decl])],
+            max_output_tokens=800,
+        )
+
+        response = None
+        for _m in ["gemini-2.5-flash-lite", "gemini-2.0-flash"]:
+            try:
+                response = gc.models.generate_content(model=_m, contents=contents, config=cfg)
+                break
+            except Exception as _me:
+                if ("503" in str(_me) or "UNAVAILABLE" in str(_me)) and _m != "gemini-2.0-flash":
+                    logger.warning("Gemini %s sobrecarregado, tentando fallback", _m)
+                    continue
+                raise
+
+        fc_part = None
+        for part in (response.candidates[0].content.parts if response.candidates else []):
+            if getattr(part, "function_call", None) and part.function_call.name == "criar_chamado":
+                fc_part = part
+                break
+
+        if fc_part:
+            chamado = _criar_chamado_ia(request.user, dict(fc_part.function_call.args))
+            fn_resp = gt.Content(role="user", parts=[gt.Part(
+                function_response=gt.FunctionResponse(
+                    name="criar_chamado",
+                    response={"chamado_id": chamado.pk, "assunto": chamado.assunto, "status": "criado com sucesso"},
+                )
+            )])
+            final = gc.models.generate_content(
+                model="gemini-2.5-flash-lite",
+                contents=contents + [gt.Content(role="model", parts=[fc_part]), fn_resp],
+                config=gt.GenerateContentConfig(system_instruction=system_prompt, max_output_tokens=400),
+            )
+            return _chamado_response(chamado, final.text)
+
         reply_html = response.text
-
-        history.append({"role": "user", "parts": [user_text]})
-        history.append({"role": "model", "parts": [reply_html]})
-        request.session["chat_history"] = history[-20:]
-
+        _save_history(reply_html)
         return JsonResponse({"html": reply_html, "chips": []})
 
     except Exception as exc:
-        logger.exception("Erro ao chamar Gemini API: %s", exc)
-        return JsonResponse({
-            "html": "<p>Não consegui me conectar ao serviço de IA no momento. Tente novamente em instantes.</p>",
-            "chips": ["Tentar novamente"],
-        })
+        logger.exception("Erro ao chamar IA: %s", exc)
+        err = str(exc)
+        if "503" in err or "UNAVAILABLE" in err:
+            html = "<p>O serviço de IA está temporariamente sobrecarregado. Aguarde alguns segundos e tente novamente.</p>"
+        elif "401" in err or "API_KEY" in err or "PERMISSION_DENIED" in err or "invalid" in err.lower():
+            html = "<p>Chave de API inválida. Verifique <code>GEMINI_API_KEY</code> no arquivo <code>.env</code>.</p>"
+        elif "429" in err or "RATE_LIMIT" in err or "quota" in err.lower():
+            html = "<p>Limite de requisições atingido. Aguarde um momento e tente novamente.</p>"
+        else:
+            html = "<p>Não consegui me conectar ao serviço de IA. Tente novamente em instantes.</p>"
+        return JsonResponse({"html": html, "chips": ["Tentar novamente"]})

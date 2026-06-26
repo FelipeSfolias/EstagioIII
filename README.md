@@ -292,15 +292,12 @@ O sistema incorpora um **assistente conversacional** alinhado às tendências de
 
 ## ✦ Como executar
 
-> ⚠ **Atenção:** este repositório acompanha o **Documento de Modelagem de Sistema (DMS) v1.4**. A configuração de execução depende do stack definitivo escolhido pelos autores. Os passos abaixo são o template recomendado para ambientes web modernos.
-
 ### Pré-requisitos
 
 | Ferramenta | Versão mínima | Download |
 |:---|:---:|:---|
-| **Node.js** | 18.x | https://nodejs.org |
-| **npm** ou **yarn** | 9.x / 1.22 | incluso com o Node.js |
-| **Banco relacional** | conforme stack | PostgreSQL, MySQL ou equivalente |
+| **Python** | 3.11+ | https://python.org |
+| **PostgreSQL** | 14+ | https://postgresql.org |
 | **Git** | qualquer | https://git-scm.com |
 
 ### Passos
@@ -308,83 +305,112 @@ O sistema incorpora um **assistente conversacional** alinhado às tendências de
 ```bash
 # 1. Clonar o repositório
 git clone <url-do-repo>
-cd sigcpc
+cd estagio
 
-# 2. Instalar dependências
-npm install
+# 2. Criar e ativar o ambiente virtual
+python -m venv .venv
+.venv\Scripts\activate      # Windows
+source .venv/bin/activate   # Linux/macOS
 
-# 3. Configurar variáveis de ambiente
-cp .env.example .env.local
-# Edite .env.local com as credenciais do banco e serviços externos
+# 3. Instalar dependências
+pip install -r requirements.txt
 
-# 4. Aplicar migrações do banco
-npm run db:migrate
+# 4. Configurar variáveis de ambiente
+cp .env.example .env
+# Edite .env com as credenciais do banco e serviços externos
 
-# 5. (Opcional) Popular dados iniciais — usuário admin, locais base
-npm run db:seed
+# 5. Aplicar migrações do banco
+python manage.py migrate
 
-# 6. Iniciar o servidor de desenvolvimento
-npm run dev
+# 6. (Opcional) Criar superusuário administrador
+python manage.py createsuperuser
+
+# 7. Iniciar o servidor de desenvolvimento
+python manage.py runserver
 ```
 
 ### Variáveis de ambiente (referência)
 
 ```env
-# Banco de dados
-DATABASE_URL=postgresql://usuario:senha@localhost:5432/sigcpc
+# Django
+SECRET_KEY=troque-este-valor-em-producao
+DEBUG=False
+ALLOWED_HOSTS=localhost,127.0.0.1
+DJANGO_SETTINGS_MODULE=config.settings.dev
 
-# Autenticação
-JWT_SECRET=seu-segredo-jwt
-SESSION_EXPIRES_IN=8h
+# Banco de dados (PostgreSQL)
+DB_NAME=estagio
+DB_USER=postgres
+DB_PASSWORD=123456
+DB_HOST=localhost
+DB_PORT=5432
 
-# Integrações
-SMTP_HOST=smtp.empresa.com
-SMTP_USER=notificacoes@krindges.com.br
-SMTP_PASSWORD=senha
+# Groq AI — primário (grátis, rápido) — obtenha em console.groq.com
+GROQ_API_KEY=your_groq_api_key_here
 
-WHATSAPP_API_TOKEN=token-da-api
+# Gemini AI — fallback — obtenha em aistudio.google.com
+GEMINI_API_KEY=your_gemini_api_key_here
 
-# Chatbot
-LLM_API_KEY=chave-do-provedor-de-ia
-LLM_MODEL=modelo-escolhido
+# E-mail (desenvolvimento: imprime no terminal)
+EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+# Para produção, descomente e configure o SMTP:
+# EMAIL_HOST=smtp-relay.brevo.com
+# EMAIL_PORT=587
+# EMAIL_HOST_USER=
+# EMAIL_HOST_PASSWORD=
+# EMAIL_USE_TLS=True
 ```
 
 <br>
 
-## ✦ Estrutura de pastas (proposta)
+## ✦ Estrutura de pastas
 
 ```
-sigcpc/
-├── public/                      # Assets estáticos (logo Krindges, favicon)
-├── docs/                        # Documentação acadêmica
-│   ├── DMS-v1.4.pdf             # Documento de Modelagem do Sistema
-│   ├── diagramas/               # Use cases, sequência, classes, DER
-│   └── prototipos/              # Mockups das telas (Figuras 1–13)
-├── src/
-│   ├── auth/                    # Login, recuperação de senha, 2FA, RBAC
-│   ├── modules/
-│   │   ├── usuarios/            # UC02 — Manter Usuários
-│   │   ├── locais/              # UC03 — hierarquia (pai_id)
-│   │   ├── ativos/              # UC04 — patrimônio
-│   │   ├── estoque/             # UC05 — itens e movimentações
-│   │   ├── chamados/            # UC06 + UC07
-│   │   ├── projetos/            # Kanban
-│   │   └── relatorios/          # UC08 — histórico e exportações
-│   ├── chatbot/                 # Assistente conversacional IA
-│   ├── shared/
-│   │   ├── components/          # UI compartilhada (cards, tabelas, gráficos)
-│   │   ├── hooks/               # Hooks reutilizáveis
-│   │   ├── utils/               # Formatters, validators, helpers
-│   │   └── notifications/       # E-mail e WhatsApp
-│   ├── api/                     # Endpoints HTTP
-│   ├── db/
-│   │   ├── migrations/          # Versionamento do schema
-│   │   ├── seeds/               # Dados iniciais
-│   │   └── models/              # Mapeamento das entidades
-│   └── audit/                   # Logs imutáveis
-├── tests/                       # Testes unitários e de integração
+estagio/
+├── apps/
+│   ├── accounts/                # Autenticação, reset de senha, RBAC
+│   │   ├── migrations/
+│   │   ├── models.py            # PasswordResetToken
+│   │   ├── views.py             # Login, logout, recuperação de senha
+│   │   └── urls.py
+│   └── core/                    # Módulos principais do sistema
+│       ├── migrations/
+│       ├── models/
+│       │   ├── ativo.py         # UC04 — patrimônio
+│       │   ├── chamado.py       # UC06 + UC07
+│       │   ├── classificacao.py # Departamentos e tópicos
+│       │   ├── estoque.py       # UC05 — itens e movimentações
+│       │   ├── kanban.py        # Quadro Kanban
+│       │   └── local.py         # UC03 — hierarquia (pai_id)
+│       ├── templatetags/        # Filtros e tags de template
+│       ├── tests/               # Testes unitários e de integração
+│       ├── ai_context.py        # Contexto para o chatbot de IA
+│       ├── authz.py             # Guards de autorização por papel
+│       ├── forms.py
+│       ├── views.py
+│       └── urls.py
+├── config/
+│   ├── settings/
+│   │   ├── base.py              # Configurações compartilhadas
+│   │   ├── dev.py               # Overrides de desenvolvimento
+│   │   └── prod.py              # Overrides de produção
+│   ├── urls.py
+│   └── wsgi.py
+├── frontend/
+│   ├── css/partials/            # Design tokens, reset, componentes
+│   └── templates/
+│       ├── base.html            # Layout principal (sidebar + header)
+│       ├── dashboard.html
+│       ├── cadastros/           # Usuários, locais, ativos, estoque
+│       ├── chamados/            # Abertura, listagem, detalhe
+│       ├── projetos/            # Kanban e indicadores
+│       ├── patrimonios/
+│       ├── chat/                # Assistente de IA
+│       └── registration/        # Login e recuperação de senha
+├── logs/                        # Logs rotativos da aplicação
+├── manage.py
+├── requirements.txt
 ├── .env.example
-├── package.json
 └── README.md
 ```
 
@@ -466,4 +492,3 @@ O código é disponibilizado para fins de estudo, avaliação acadêmica e uso i
 <sub>FAMPER • Krindges Industrial S/A • 2025</sub>
 
 </div>
->>>>>>> f224601415a3b0de9117a6dfdd4eea9dbbc02e00

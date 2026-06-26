@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% load chamado_tags %}
+{% block title %}Meus Chamados{% endblock %}
+{% block topbar %}{% endblock %}
+
+{% block content %}
+
+<div class="mc-page">
+
+  {# ── Cabeçalho ── #}
+  <div class="mc-topbar">
+    <div>
+      <h1 class="mc-title">Meus Chamados</h1>
+      <p class="mc-subtitle">Acompanhe os chamados que você abriu</p>
+    </div>
+    <a href="{% url 'core:chamado_criar_tier' %}" class="cl-btn-new">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+        <path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      Novo Chamado
+    </a>
+  </div>
+
+  {# ── Pills de status ── #}
+  <div class="mc-pills-bar">
+    <a href="{% url_filtro filtro='aberto' %}" class="mc-pill {% if filtro == 'aberto' %}active{% endif %}">
+      <span class="mc-pill-dot" style="background:var(--blue)"></span>
+      <span>Abertos</span>
+      <span class="mc-pill-count">{{ contagens.aberto }}</span>
+    </a>
+    <a href="{% url_filtro filtro='em_atendimento' %}" class="mc-pill {% if filtro == 'em_atendimento' %}active{% endif %}">
+      <span class="mc-pill-dot" style="background:var(--orange)"></span>
+      <span>Em andamento</span>
+      <span class="mc-pill-count">{{ contagens.em_atendimento }}</span>
+    </a>
+    <a href="{% url_filtro filtro='fechado' %}" class="mc-pill {% if filtro == 'fechado' %}active{% endif %}">
+      <span class="mc-pill-dot" style="background:#9ca3af"></span>
+      <span>Fechados</span>
+      <span class="mc-pill-count">{{ contagens.fechado }}</span>
+    </a>
+    <a href="{% url_filtro filtro='todos' %}" class="mc-pill {% if filtro == 'todos' %}active{% endif %}">
+      <span>Todos</span>
+      <span class="mc-pill-count">{{ contagens.total }}</span>
+    </a>
+  </div>
+
+  {# ── Busca + ordenação ── #}
+  <div class="mc-searchbar">
+    <form method="get" class="cl-fsearch" role="search">
+      <input type="hidden" name="filtro" value="{{ filtro }}">
+      <input type="hidden" name="ordem" value="{{ ordem }}">
+      <span class="cl-fsearch-ico">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M10 10l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <input type="text" name="q" value="{{ q }}" placeholder="Buscar por assunto, departamento, agente ou nº…" aria-label="Buscar chamados">
+    </form>
+    <a href="{% if ordem == 'recentes' %}{% url_filtro ordem='antigos' %}{% else %}{% url_filtro ordem='recentes' %}{% endif %}" class="mc-sort-btn">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+        <path d="M4 5l4-3 4 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M8 2v12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M4 11l4 3 4-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      {% if ordem == 'recentes' %}Mais recentes{% else %}Mais antigos{% endif %}
+    </a>
+  </div>
+
+  {# ── Cabeçalho da seção ── #}
+  <div class="cl-section-header">
+    <span class="cl-section-refresh" title="Atualizar" onclick="window.location.reload()">↻</span>
+    <span class="cl-section-title">
+      {% if filtro == 'aberto' %}Abertos
+      {% elif filtro == 'em_atendimento' %}Em andamento
+      {% elif filtro == 'fechado' %}Fechados
+      {% else %}Todos os chamados{% endif %}
+    </span>
+    <span class="cl-section-count">{{ page_obj.paginator.count }} chamado{{ page_obj.paginator.count|pluralize }}</span>
+  </div>
+
+  {# ── Tabela ── #}
+  <div class="cl-table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="cl-col-id">Ticket</th>
+          <th class="cl-col-data">Atualização</th>
+          <th>Assunto</th>
+          <th class="mc-col-status">Status</th>
+          <th class="cl-col-prio">Prioridade</th>
+          <th class="cl-col-agente">Agente</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in page_obj %}
+        <tr onclick="window.location.href='{% url 'core:chamado_detalhe' c.pk %}'">
+          <td class="cl-col-id">
+            <a href="{% url 'core:chamado_detalhe' c.pk %}" class="cl-ticket-id" onclick="event.stopPropagation()">#{{ c.pk }}</a>
+          </td>
+          <td class="cl-col-data">{{ c.atualizado_em|date:"d/m/Y H:i" }}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span class="cl-ticket-assunto">{{ c.assunto }}</span>
+              {% if c.total_respostas > 0 %}
+              <span class="cl-resp-badge">
+                <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
+                  <path d="M1 2h12v8H8l-3 3v-3H1V2z" stroke="#9ca3af" stroke-width="1.2" stroke-linejoin="round"/>
+                </svg>
+                {{ c.total_respostas }}
+              </span>
+              {% endif %}
+            </div>
+            {% if c.departamento %}<span class="cl-ticket-origem">{{ c.departamento.nome }}</span>{% endif %}
+          </td>
+          <td class="mc-col-status">
+            {% if c.status == 'aberto' %}
+            <span class="ch-badge ch-badge-blue">
+              <span class="mc-bdot" style="background:var(--blue)"></span>Aberto
+            </span>
+            {% elif c.status == 'em_atendimento' %}
+            <span class="ch-badge ch-badge-orange">
+              <span class="mc-bdot" style="background:var(--orange)"></span>Em andamento
+            </span>
+            {% elif c.status == 'resolvido' %}
+            <span class="ch-badge ch-badge-green">
+              <span class="mc-bdot" style="background:var(--green)"></span>Resolvido
+            </span>
+            {% else %}
+            <span class="ch-badge ch-badge-gray">
+              <span class="mc-bdot" style="background:#9ca3af"></span>Fechado
+            </span>
+            {% endif %}
+          </td>
+          <td class="cl-col-prio">
+            {% if c.prioridade == 'alta' or c.prioridade == 'critica' %}
+            <span class="ch-badge ch-badge-red">{{ c.get_prioridade_display }}</span>
+            {% elif c.prioridade == 'media' %}
+            <span class="ch-badge ch-badge-yellow">{{ c.get_prioridade_display }}</span>
+            {% elif c.prioridade == 'baixa' %}
+            <span class="ch-badge ch-badge-green">{{ c.get_prioridade_display }}</span>
+            {% else %}
+            <span class="ch-badge ch-badge-gray">{{ c.get_prioridade_display }}</span>
+            {% endif %}
+          </td>
+          <td class="cl-col-agente">
+            {% if c.agente %}
+            <div class="mc-agente">
+              <span class="mc-avatar">{% if c.agente.first_name %}{{ c.agente.first_name|slice:":1" }}{{ c.agente.last_name|slice:":1" }}{% else %}{{ c.agente.username|slice:":2"|upper }}{% endif %}</span>
+              {{ c.agente.get_full_name|default:c.agente.username }}
+            </div>
+            {% else %}
+            <span class="mc-no-agente">— Não atribuído</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="mc-empty-cell">
+            <div class="mc-empty">
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none" class="mc-empty-ico">
+                <rect x="6" y="10" width="36" height="30" rx="3" stroke="#cbd5e1" stroke-width="2"/>
+                <path d="M6 18h36" stroke="#cbd5e1" stroke-width="2"/>
+                <path d="M16 26h16M16 32h10" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              {% if q %}
+              <p class="mc-empty-title">Nenhum resultado para "{{ q }}"</p>
+              <p class="mc-empty-sub">Tente outros termos ou <a href="{% url_filtro q='' %}">limpe a busca</a>.</p>
+              {% else %}
+              <p class="mc-empty-title">
+                {% if filtro == 'aberto' %}Nenhum chamado aberto
+                {% elif filtro == 'em_atendimento' %}Nenhum chamado em andamento
+                {% elif filtro == 'fechado' %}Nenhum chamado fechado
+                {% else %}Você ainda não abriu nenhum chamado{% endif %}
+              </p>
+              <p class="mc-empty-sub">Quando você abrir um chamado ele aparecerá aqui.</p>
+              <a href="{% url 'core:chamado_criar_tier' %}" class="cl-btn-new" style="margin-top:12px">Abrir novo chamado</a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="cl-pagination">
+      <span class="cl-page-info">{{ page_obj.start_index }}–{{ page_obj.end_index }} de {{ page_obj.paginator.count }}</span>
+      <div class="cl-page-btns">
+        {% if page_obj.has_previous %}
+        <a href="{% url_filtro page=page_obj.previous_page_number reset_page=False %}" class="cl-page-btn">‹</a>
+        {% else %}
+        <span class="cl-page-btn disabled">‹</span>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+          {% if num == page_obj.number %}
+          <span class="cl-page-btn active">{{ num }}</span>
+          {% elif num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+          <a href="{% url_filtro page=num reset_page=False %}" class="cl-page-btn">{{ num }}</a>
+          {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <a href="{% url_filtro page=page_obj.next_page_number reset_page=False %}" class="cl-page-btn">›</a>
+        {% else %}
+        <span class="cl-page-btn disabled">›</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+{% endblock %}

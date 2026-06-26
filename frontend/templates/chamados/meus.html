@@ -28,6 +28,16 @@
           <span>Vencidos</span><span class="cl-dd-count {% if contagens.vencido == 0 %}zero{% endif %}">{{ contagens.vencido }}</span>
         </a>
       </div>
+      {% if filas %}
+      <div class="cl-dd-section">
+        {% for f in filas %}
+        <a href="{% url 'core:chamados_todos' %}?fila={{ f.id }}" class="cl-dd-row">
+          <span>{{ f.nome }}</span>
+          <span class="cl-dd-count {% if not f.total %}zero{% endif %}">{{ f.total }}</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
   </div>
 
@@ -286,16 +296,16 @@
             </span>
             {% endif %}
           </div>
-          <span class="cl-ticket-origem">{{ c.origem }}</span>
+          {% if c.departamento %}<span class="cl-ticket-origem">{{ c.departamento.nome }}</span>{% endif %}
         </td>
         <td class="cl-col-usuario">
-          {% if c.aberto_por %}{{ c.aberto_por.username }}{% else %}—{% endif %}
+          {% if c.aberto_por %}{{ c.aberto_por.get_full_name|default:c.aberto_por.username }}{% else %}—{% endif %}
         </td>
         <td class="cl-col-prio">
           <span class="ch-badge ch-badge-{{ c.prioridade|prioridade_color }}">{{ c.get_prioridade_display }}</span>
         </td>
         <td class="cl-col-agente">
-          {% if c.agente %}{{ c.agente.username }}{% else %}<span style="color:var(--muted)">—</span>{% endif %}
+          {% if c.agente %}{{ c.agente.get_full_name|default:c.agente.username }}{% else %}<span style="color:var(--muted)">—</span>{% endif %}
         </td>
       </tr>
       {% empty %}

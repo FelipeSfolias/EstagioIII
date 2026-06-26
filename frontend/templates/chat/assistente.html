@@ -314,6 +314,60 @@ kbd {
 .ct-sec-ico { color: var(--blue); flex-shrink: 0; margin-top: 1px; }
 .ct-sec-txt { font-size: 12px; color: var(--muted); line-height: 1.45; }
 
+/* Image preview in composer */
+.ct-img-preview {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px; border-top: 1px solid var(--line);
+  background: var(--bg);
+}
+.ct-img-preview img {
+  width: 48px; height: 48px; object-fit: cover;
+  border-radius: 6px; border: 1px solid var(--line);
+}
+.ct-img-preview-name { font-size: 12px; color: var(--muted); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ct-img-remove {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--red-light); color: var(--red);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; line-height: 1; cursor: pointer; flex-shrink: 0;
+  border: none;
+}
+/* Image thumbnail in user bubble */
+.ct-bubble-user img.ct-msg-img {
+  display: block; max-width: 220px; border-radius: 8px; margin-top: 6px;
+  border: 1px solid rgba(255,255,255,.25);
+}
+/* Chamado criado card */
+.ct-chamado-card {
+  background: var(--surface); border: 1px solid var(--green);
+  border-radius: 9px; overflow: hidden; max-width: 360px; margin-top: 8px;
+}
+.ct-chamado-head {
+  background: var(--green-light); border-bottom: 1px solid #bbf7d0;
+  padding: 8px 12px; display: flex; align-items: center; gap: 7px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .5px; color: var(--green);
+}
+.ct-chamado-body { padding: 11px 12px; display: flex; flex-direction: column; gap: 8px; }
+.ct-chamado-row  { display: flex; align-items: flex-start; gap: 8px; }
+.ct-chamado-k {
+  width: 78px; flex-shrink: 0;
+  font-size: 11px; text-transform: uppercase; letter-spacing: .3px;
+  color: var(--muted); padding-top: 2px;
+}
+.ct-chamado-v { font-size: 13px; font-weight: 500; }
+.ct-chamado-footer {
+  display: flex; padding: 10px 12px;
+  border-top: 1px solid var(--line); background: #fafbfc;
+}
+.ct-chamado-link {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 14px; background: var(--green); color: #fff;
+  border-radius: 7px; font-size: 12.5px; font-weight: 600;
+  transition: background .12s;
+}
+.ct-chamado-link:hover { background: #15803d; color: #fff; }
+
 /* ── Responsive ── */
 @media (max-width: 1040px) {
   .ct-page { grid-template-columns: 1fr; }
@@ -367,13 +421,14 @@ kbd {
     <!-- Composer -->
     <div class="ct-composer">
       <div class="ct-composer-box">
-        <button class="ct-attach" type="button" title="Anexar arquivo">
+        <input type="file" id="ct-file-input" accept="image/*" style="display:none">
+        <button class="ct-attach" type="button" id="ct-attach-btn" title="Anexar print/screenshot">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/>
           </svg>
         </button>
         <textarea class="ct-ta" id="ct-input" rows="1"
-          placeholder="Descreva seu problema — eu te ajudo a diagnosticar ou te indico como abrir um chamado…"></textarea>
+          placeholder="Descreva seu problema ou anexe um print — eu diagnostico e abro o chamado por você…"></textarea>
         <button class="ct-send" id="ct-send" disabled>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2" fill="currentColor"/>
@@ -448,7 +503,13 @@ kbd {
             <span class="ct-do-check">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
             </span>
-            <span class="ct-do-txt">Te oriento a abrir o chamado certo, com a categoria e prioridade adequadas</span>
+            <span class="ct-do-txt">Abre chamado por você após entender o problema e confirmar os dados</span>
+          </div>
+          <div class="ct-do-item">
+            <span class="ct-do-check">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            </span>
+            <span class="ct-do-txt">Analisa prints e screenshots de erros do TOTVS Moda e outros sistemas</span>
           </div>
           <div class="ct-do-item">
             <span class="ct-do-check">
@@ -460,13 +521,7 @@ kbd {
             <span class="ct-do-check">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
             </span>
-            <span class="ct-do-txt">Consulta status e SLA dos seus chamados</span>
-          </div>
-          <div class="ct-do-item">
-            <span class="ct-do-check">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-            </span>
-            <span class="ct-do-txt">Quando precisa do time de TI, te oriento a abrir o chamado no sistema</span>
+            <span class="ct-do-txt">Consulta status e SLA dos seus chamados em aberto</span>
           </div>
         </div>
       </div>
@@ -495,9 +550,13 @@ const USER_INITIALS = "{{ user_initials|escapejs }}";
 const CSRF_TOKEN    = "{{ csrf_token }}";
 const ABRIR_URL     = "{% url 'core:chamado_novo' %}";
 
-const msgsEl  = document.getElementById('ct-msgs');
-const inputEl = document.getElementById('ct-input');
-const sendEl  = document.getElementById('ct-send');
+const msgsEl    = document.getElementById('ct-msgs');
+const inputEl   = document.getElementById('ct-input');
+const sendEl    = document.getElementById('ct-send');
+const fileInput = document.getElementById('ct-file-input');
+
+/* pending image: {b64, mime, dataUrl, name} */
+let pendingImage = null;
 
 const SPARKLE_SM = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none">
   <path d="M12 2L13.8 9.2L21 11L13.8 12.8L12 20L10.2 12.8L3 11L10.2 9.2Z" fill="white" fill-opacity=".95"/>
@@ -509,7 +568,7 @@ function nowTime() {
   return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 function scrollEnd() { msgsEl.scrollTop = msgsEl.scrollHeight; }
-function updateSend() { sendEl.disabled = inputEl.value.trim() === ''; }
+function updateSend() { sendEl.disabled = inputEl.value.trim() === '' && !pendingImage; }
 function autoGrow() {
   inputEl.style.height = 'auto';
   inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
@@ -538,12 +597,23 @@ function addBotMsg(html, chips) {
   return div;
 }
 
-function addUserMsg(text) {
+function addUserMsg(text, imgDataUrl) {
   const div = document.createElement('div');
   div.className = 'ct-msg ct-msg-user';
   const bubble = document.createElement('div');
   bubble.className = 'ct-bubble ct-bubble-user';
-  bubble.textContent = text; // XSS-safe: textContent, never innerHTML
+  if (text) {
+    const t = document.createElement('span');
+    t.textContent = text; // XSS-safe
+    bubble.appendChild(t);
+  }
+  if (imgDataUrl) {
+    const img = document.createElement('img');
+    img.src = imgDataUrl;
+    img.className = 'ct-msg-img';
+    img.alt = 'print anexado';
+    bubble.appendChild(img);
+  }
   const ts = document.createElement('div');
   ts.className = 'ct-time ct-time-r';
   ts.textContent = nowTime();
@@ -557,6 +627,37 @@ function addUserMsg(text) {
   div.appendChild(body);
   div.appendChild(av);
   msgsEl.appendChild(div);
+  scrollEnd();
+}
+
+function addChamadoCard(data) {
+  const prioMap = { critica: ['ct-draft-alta','Crítica'], alta: ['ct-draft-alta','Alta'], media: ['ct-draft-media','Média'], baixa: ['ct-draft-baixa','Baixa'] };
+  const [cls, label] = prioMap[data.prioridade] || ['ct-draft-media', data.prioridade];
+  const card = document.createElement('div');
+  card.className = 'ct-chamado-card';
+  card.innerHTML = `
+    <div class="ct-chamado-head">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+      Chamado #${data.id} aberto com sucesso
+    </div>
+    <div class="ct-chamado-body">
+      <div class="ct-chamado-row">
+        <span class="ct-chamado-k">Assunto</span>
+        <span class="ct-chamado-v">${data.assunto}</span>
+      </div>
+      <div class="ct-chamado-row">
+        <span class="ct-chamado-k">Prioridade</span>
+        <span class="ct-chamado-v"><span class="ct-draft-badge ${cls}">${label}</span></span>
+      </div>
+    </div>
+    <div class="ct-chamado-footer">
+      <a href="${data.url}" class="ct-chamado-link">Ver chamado</a>
+    </div>`;
+  const bodies = msgsEl.querySelectorAll('.ct-msg:not(.ct-msg-user) .ct-msg-body');
+  const last = bodies[bodies.length - 1];
+  if (last) last.appendChild(card);
   scrollEnd();
 }
 
@@ -641,30 +742,62 @@ const RESPONDER_URL = "{% url 'core:assistente_responder' %}";
 function triggerSend(btn) { send(btn.dataset.send); }
 
 async function send(text) {
-  text = (text !== undefined ? text : inputEl.value).trim();
-  if (!text) return;
+  const txt = (text !== undefined ? text : inputEl.value).trim();
+  const img = pendingImage;
+  if (!txt && !img) return;
+
   inputEl.value = '';
+  pendingImage = null;
+  removeImagePreview();
   updateSend();
   autoGrow();
-  addUserMsg(text);
+  addUserMsg(txt, img ? img.dataUrl : null);
   sendEl.disabled = true;
   const typingEl = showTyping();
+
   try {
+    const payload = { text: txt };
+    if (img) { payload.image_b64 = img.b64; payload.image_mime = img.mime; }
     const res = await fetch(RESPONDER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
     typingEl.remove();
     addBotMsg(data.html || '<p>Sem resposta do servidor.</p>', data.chips?.length ? data.chips : null);
+    if (data.chamado_criado) addChamadoCard(data.chamado_criado);
   } catch (_) {
     typingEl.remove();
     addBotMsg('<p>Falha ao conectar com o servidor. Verifique sua conexão e tente novamente.</p>',
               ['Tentar novamente']);
   } finally {
-    sendEl.disabled = inputEl.value.trim() === '';
+    updateSend();
   }
+}
+
+/* === Image preview === */
+function showImagePreview(file, dataUrl) {
+  removeImagePreview();
+  const bar = document.createElement('div');
+  bar.className = 'ct-img-preview';
+  bar.id = 'ct-img-preview';
+  bar.innerHTML = `
+    <img src="${dataUrl}" alt="preview">
+    <span class="ct-img-preview-name">${file.name}</span>
+    <button class="ct-img-remove" id="ct-img-remove" title="Remover imagem">&#x2715;</button>`;
+  document.querySelector('.ct-composer').prepend(bar);
+  document.getElementById('ct-img-remove').addEventListener('click', () => {
+    pendingImage = null;
+    fileInput.value = '';
+    removeImagePreview();
+    updateSend();
+  });
+}
+
+function removeImagePreview() {
+  const el = document.getElementById('ct-img-preview');
+  if (el) el.remove();
 }
 
 /* === Greet === */
@@ -674,7 +807,7 @@ async function greet() {
   addBotMsg(
     `<p>Oi, ${FIRST_NAME} 👋 Sou seu assistente de TI. Te ajudo a diagnosticar problemas, oriento como abrir um chamado na tela de chamados e mostro como acompanhar seus atendimentos.</p>
      <p>Como posso ajudar hoje?</p>`,
-    ['Meu Wi-Fi caiu', 'Resetar senha', 'Status do meu chamado', 'Como abrir um chamado']
+    ['Meu Wi-Fi caiu', 'Resetar senha', 'Status do meu chamado', 'Abrir chamado para mim']
   );
   // Limpa histórico de conversa no servidor
   fetch(RESPONDER_URL, {
@@ -693,6 +826,22 @@ inputEl.addEventListener('keydown', e => {
   }
 });
 sendEl.addEventListener('click', () => send());
+
+document.getElementById('ct-attach-btn').addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dataUrl = e.target.result;
+    const b64 = dataUrl.split(',')[1];
+    const mime = file.type || 'image/png';
+    pendingImage = { b64, mime, dataUrl, name: file.name };
+    showImagePreview(file, dataUrl);
+    updateSend();
+  };
+  reader.readAsDataURL(file);
+});
 
 document.getElementById('ct-btn-new').addEventListener('click', () => greet());
 document.getElementById('ct-btn-hist').addEventListener('click', () => {

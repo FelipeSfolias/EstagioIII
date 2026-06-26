@@ -1,12 +1,5 @@
 from collections import Counter
 
-
-MOCK_USUARIOS = [
-    {"id": 1, "nome": "Admin", "email": "admin@empresa.com", "nome_usuario": "admin", "role": "admin", "ativo": True},
-    {"id": 2, "nome": "Gestor", "email": "gestora@empresa.com", "nome_usuario": "gestora", "role": "gestor", "ativo": True},
-    {"id": 3, "nome": "Colaborador", "email": "user@empresa.com", "nome_usuario": "user", "role": "usuario", "ativo": True},
-]
-
 # ---------------- PROJETOS (MOCK) ----------------
 MOCK_PROJETOS = [
     {"id": 1,  "titulo": "Upgrade Wi-Fi",    "responsavel": "Suporte 1", "status": "em_andamento", "coluna_key": "em_andamento", "area": "Infraestrutura de T.I", "percentual": 48.7, "prazo": "2025-10-25", "atrasado": False, "cor": "blue"},
