@@ -68,6 +68,21 @@ def filename(value):
     return os.path.basename(str(value))
 
 
+@register.filter
+def user_initials(user):
+    """Returns 1-2 letter initials from a User object or full-name string."""
+    if not user:
+        return '?'
+    try:
+        full = (user.get_full_name() or user.username or '').strip()
+    except AttributeError:
+        full = str(user).strip()
+    parts = full.split()
+    if len(parts) >= 2:
+        return (parts[0][0] + parts[-1][0]).upper()
+    return (full[:2] or '??').upper()
+
+
 @register.simple_tag(takes_context=True)
 def url_filtro(context, reset_page=True, **kwargs):
     """Reescreve a query string atual aplicando/limpando params.

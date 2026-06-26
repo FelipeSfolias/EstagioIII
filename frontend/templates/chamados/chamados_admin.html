@@ -1,0 +1,689 @@
+{% extends "base.html" %}
+{% load chamado_tags %}
+{% block title %}Chamados — Administração{% endblock %}
+{% block topbar %}{% endblock %}
+
+{% block content %}
+
+{# ── Sub-navegação ── #}
+<nav class="cl-nav">
+
+  <div class="cl-nav-item">
+    <button class="cl-nav-btn active">
+      <svg class="cl-nav-ico" viewBox="0 0 16 16" fill="none">
+        <rect x="3.5" y="2.5" width="9" height="11" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
+        <path d="M6 2.5h4v2H6z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+      </svg>
+      Fila de Chamados
+      <svg class="cl-nav-chevron" viewBox="0 0 12 12" fill="none">
+        <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="cl-dropdown">
+      <div class="cl-dd-section">
+        <a href="{% url 'core:chamados_admin' %}?status=aberto" class="cl-dd-row">
+          <span>Abertos</span><span class="cl-dd-count">{{ contagens.aberto }}</span>
+        </a>
+        <a href="{% url 'core:chamados_admin' %}?status=em_atendimento" class="cl-dd-row">
+          <span>Em atendimento</span><span class="cl-dd-count">{{ contagens.em_atendimento }}</span>
+        </a>
+        <a href="{% url 'core:chamados_admin' %}?status=fechado" class="cl-dd-row">
+          <span>Fechados</span><span class="cl-dd-count {% if contagens.fechado == 0 %}zero{% endif %}">{{ contagens.fechado }}</span>
+        </a>
+      </div>
+      {% if filas %}
+      <div class="cl-dd-section">
+        {% for fila in filas %}
+        <a href="{% url 'core:chamados_admin' %}?fila={{ fila.id }}" class="cl-dd-row">
+          <span>{{ fila.nome }}</span>
+          <span class="cl-dd-count {% if fila.total == 0 %}zero{% endif %}">{{ fila.total }}</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="cl-nav-item">
+    <button class="cl-nav-btn">
+      <svg class="cl-nav-ico" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/>
+        <path d="M3.5 13c0-2.5 2-4.5 4.5-4.5s4.5 2 4.5 4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+      </svg>
+      Meus Tickets
+      <svg class="cl-nav-chevron" viewBox="0 0 12 12" fill="none">
+        <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="cl-dropdown">
+      <div class="cl-dd-section">
+        <a href="{% url 'core:chamados_admin' %}?status=aberto&agente={{ request.user.pk }}" class="cl-dd-row">
+          <span>Abertos</span>
+        </a>
+        <a href="{% url 'core:chamados_admin' %}?status=em_atendimento&agente={{ request.user.pk }}" class="cl-dd-row">
+          <span>Em atendimento</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="cl-nav-item">
+    <button class="cl-nav-btn">
+      <svg class="cl-nav-ico" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.3"/>
+        <path d="M5.5 8l1.8 1.8L10.5 6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Fechados
+      <svg class="cl-nav-chevron" viewBox="0 0 12 12" fill="none">
+        <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="cl-dropdown">
+      <div class="cl-dd-section">
+        <a href="{% url 'core:chamados_admin' %}?status=fechado" class="cl-dd-row">
+          <span>Todos fechados</span><span class="cl-dd-count">{{ contagens.fechado }}</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-left:auto">
+    <a href="{% url 'core:chamado_criar_tier' %}" class="cl-btn-new">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+        <path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      Novo Chamado
+    </a>
+  </div>
+
+</nav>
+
+{# ── Segmented status pills ── #}
+<div class="ca-seg-bar">
+  <a href="{% url_filtro status='todos' agente='' prioridade='' fila='' q='' %}"
+     class="ca-seg-pill {% if status_f == 'todos' %}active{% endif %}">
+    Todos
+    <span class="ca-seg-count">{{ contagens.total }}</span>
+  </a>
+  <a href="{% url_filtro status='aberto' agente='' prioridade='' fila='' q='' %}"
+     class="ca-seg-pill {% if status_f == 'aberto' %}active ca-seg-blue{% endif %}">
+    <span class="ca-seg-dot" style="background:var(--blue)"></span>
+    Abertos
+    <span class="ca-seg-count">{{ contagens.aberto }}</span>
+  </a>
+  <a href="{% url_filtro status='em_atendimento' agente='' prioridade='' fila='' q='' %}"
+     class="ca-seg-pill {% if status_f == 'em_atendimento' %}active ca-seg-orange{% endif %}">
+    <span class="ca-seg-dot" style="background:var(--orange)"></span>
+    Em Atendimento
+    <span class="ca-seg-count">{{ contagens.em_atendimento }}</span>
+  </a>
+  <a href="{% url_filtro status='fechado' agente='' prioridade='' fila='' q='' %}"
+     class="ca-seg-pill {% if status_f == 'fechado' %}active ca-seg-gray{% endif %}">
+    <span class="ca-seg-dot" style="background:#9ca3af"></span>
+    Fechados
+    <span class="ca-seg-count">{{ contagens.fechado }}</span>
+  </a>
+  {% if contagens.sem_agente > 0 %}
+  <a href="{% url_filtro status='aberto' agente=0 prioridade='' fila='' q='' %}"
+     class="ca-seg-pill ca-seg-alert {% if agente_f == '0' and status_f == 'aberto' %}active ca-seg-red{% endif %}">
+    <span class="ca-seg-dot" style="background:var(--red)"></span>
+    Sem agente
+    <span class="ca-seg-count ca-seg-count-alert">{{ contagens.sem_agente }}</span>
+  </a>
+  {% endif %}
+</div>
+
+{# ── Barra de filtros ── #}
+<div class="cl-fbar">
+  <div class="cl-fbar-row">
+
+    <form method="get" action="" class="cl-fsearch" role="search">
+      {% if status_f %}<input type="hidden" name="status" value="{{ status_f }}">{% endif %}
+      {% if prioridade_f %}<input type="hidden" name="prioridade" value="{{ prioridade_f }}">{% endif %}
+      {% if fila_f %}<input type="hidden" name="fila" value="{{ fila_f }}">{% endif %}
+      {% if agente_f %}<input type="hidden" name="agente" value="{{ agente_f }}">{% endif %}
+      <span class="cl-fsearch-ico">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M10 10l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <input type="text" name="q" value="{{ q }}" placeholder="Buscar por assunto, solicitante ou nº…" aria-label="Buscar chamados">
+    </form>
+
+    {# PRIORIDADE #}
+    <div class="cl-filter-dd">
+      <button type="button" class="cl-filter-dd-btn {% if prioridade_f %}has-value{% endif %}">
+        <span class="lbl">Prioridade:</span>
+        <span class="val">
+          {% if prioridade_f == 'alta' %}Alta
+          {% elif prioridade_f == 'media' %}Média
+          {% elif prioridade_f == 'baixa' %}Baixa
+          {% elif prioridade_f == 'critica' %}Crítica
+          {% else %}Todas{% endif %}
+        </span>
+        <svg class="cl-filter-chev" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="cl-filter-menu">
+        <div class="cl-filter-menu-head">Prioridade</div>
+        <a class="cl-filter-opt {% if not prioridade_f %}sel{% endif %}" href="{% url_filtro prioridade='' %}"><span class="ck"></span><span>Todas</span></a>
+        <a class="cl-filter-opt {% if prioridade_f == 'critica' %}sel{% endif %}" href="{% url_filtro prioridade='critica' %}"><span class="ck"></span><span class="dot" style="background:var(--red)"></span><span>Crítica</span></a>
+        <a class="cl-filter-opt {% if prioridade_f == 'alta' %}sel{% endif %}" href="{% url_filtro prioridade='alta' %}"><span class="ck"></span><span class="dot" style="background:var(--orange)"></span><span>Alta</span></a>
+        <a class="cl-filter-opt {% if prioridade_f == 'media' %}sel{% endif %}" href="{% url_filtro prioridade='media' %}"><span class="ck"></span><span class="dot" style="background:var(--yellow)"></span><span>Média</span></a>
+        <a class="cl-filter-opt {% if prioridade_f == 'baixa' %}sel{% endif %}" href="{% url_filtro prioridade='baixa' %}"><span class="ck"></span><span class="dot" style="background:var(--green)"></span><span>Baixa</span></a>
+      </div>
+    </div>
+
+    {# AGENTE #}
+    <div class="cl-filter-dd">
+      <button type="button" class="cl-filter-dd-btn {% if agente_f %}has-value{% endif %}">
+        <span class="lbl">Agente:</span>
+        <span class="val">
+          {% if agente_f == '0' %}Não atribuído
+          {% elif agente_f %}{% for m in membros %}{% if m.id|stringformat:"s" == agente_f %}{{ m.get_full_name|default:m.username }}{% endif %}{% endfor %}
+          {% else %}Todos{% endif %}
+        </span>
+        <svg class="cl-filter-chev" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="cl-filter-menu">
+        <div class="cl-filter-menu-head">Agente</div>
+        <a class="cl-filter-opt {% if not agente_f %}sel{% endif %}" href="{% url_filtro agente='' %}"><span class="ck"></span><span>Todos</span></a>
+        <a class="cl-filter-opt {% if agente_f == '0' %}sel{% endif %}" href="{% url_filtro agente=0 %}"><span class="ck"></span><span>Não atribuído</span></a>
+        {% for m in membros %}
+        <a class="cl-filter-opt {% if m.id|stringformat:'s' == agente_f %}sel{% endif %}" href="{% url_filtro agente=m.id %}">
+          <span class="ck"></span><span>{{ m.get_full_name|default:m.username }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# FILA #}
+    <div class="cl-filter-dd">
+      <button type="button" class="cl-filter-dd-btn {% if fila_f %}has-value{% endif %}">
+        <span class="lbl">Fila:</span>
+        <span class="val">
+          {% if fila_f %}{% for fila in filas %}{% if fila.id|stringformat:"s" == fila_f %}{{ fila.nome }}{% endif %}{% endfor %}
+          {% else %}Todas{% endif %}
+        </span>
+        <svg class="cl-filter-chev" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="cl-filter-menu">
+        <div class="cl-filter-menu-head">Fila / Departamento</div>
+        <a class="cl-filter-opt {% if not fila_f %}sel{% endif %}" href="{% url_filtro fila='' %}"><span class="ck"></span><span>Todas</span></a>
+        {% for fila in filas %}
+        <a class="cl-filter-opt {% if fila.id|stringformat:'s' == fila_f %}sel{% endif %}" href="{% url_filtro fila=fila.id %}">
+          <span class="ck"></span><span>{{ fila.nome }}</span><span class="opt-count">{{ fila.total }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="cl-fbar-spacer"></div>
+
+    {% if q or prioridade_f or fila_f or agente_f or status_f != 'aberto' %}
+    <a href="{% url 'core:chamados_admin' %}" class="ca-clear-link">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+        <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      Limpar filtros
+    </a>
+    {% endif %}
+
+  </div>
+</div>
+
+{# ── Cabeçalho da seção ── #}
+<div class="cl-section-header">
+  <span class="cl-section-refresh" title="Atualizar" onclick="window.location.reload()">↻</span>
+  <span class="cl-section-title">
+    {% if status_f == 'aberto' %}Abertos
+    {% elif status_f == 'em_atendimento' %}Em Atendimento
+    {% elif status_f == 'fechado' %}Fechados
+    {% else %}Todos os Chamados{% endif %}
+  </span>
+  <span class="cl-section-count">{{ page_obj.paginator.count }} chamado{{ page_obj.paginator.count|pluralize }}</span>
+</div>
+
+{# ── Tabela ── #}
+<div class="cl-table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th class="cl-col-check">
+          <input type="checkbox" id="selectAll" onchange="toggleAll(this)">
+        </th>
+        <th class="cl-col-id">
+          <a href="{% if ordem == 'id' and dir == 'asc' %}{% url_filtro ordem='id' dir='desc' %}{% else %}{% url_filtro ordem='id' dir='asc' %}{% endif %}" class="cl-th-link">
+            Ticket {% if ordem == 'id' %}{% if dir == 'asc' %}↑{% else %}↓{% endif %}{% else %}<span style="opacity:.4">↕</span>{% endif %}
+          </a>
+        </th>
+        <th class="cl-col-data">
+          <a href="{% if ordem == 'atualizado_em' and dir == 'asc' %}{% url_filtro ordem='atualizado_em' dir='desc' %}{% else %}{% url_filtro ordem='atualizado_em' dir='asc' %}{% endif %}" class="cl-th-link">
+            Atualização {% if ordem == 'atualizado_em' %}{% if dir == 'asc' %}↑{% else %}↓{% endif %}{% else %}<span style="opacity:.4">↕</span>{% endif %}
+          </a>
+        </th>
+        <th>Assunto</th>
+        <th class="cl-col-usuario">Solicitante</th>
+        <th class="ca-col-status">Status</th>
+        <th class="cl-col-prio">
+          <a href="{% if ordem == 'prioridade' and dir == 'asc' %}{% url_filtro ordem='prioridade' dir='desc' %}{% else %}{% url_filtro ordem='prioridade' dir='asc' %}{% endif %}" class="cl-th-link">
+            Prioridade {% if ordem == 'prioridade' %}{% if dir == 'asc' %}↑{% else %}↓{% endif %}{% else %}<span style="opacity:.4">↕</span>{% endif %}
+          </a>
+        </th>
+        <th class="ca-col-agente">Agente</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in page_obj %}
+      <tr onclick="window.location.href='{% url 'core:chamado_detalhe' c.pk %}'">
+
+        <td class="cl-col-check" onclick="event.stopPropagation()">
+          <input type="checkbox" class="row-check" value="{{ c.pk }}" onchange="toggleRow(this)">
+        </td>
+
+        <td class="cl-col-id">
+          <a href="{% url 'core:chamado_detalhe' c.pk %}" class="cl-ticket-id" onclick="event.stopPropagation()">#{{ c.pk }}</a>
+        </td>
+
+        <td class="cl-col-data" style="white-space:nowrap">{{ c.atualizado_em|date:"d/m/Y H:i" }}</td>
+
+        <td>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="cl-ticket-assunto">{{ c.assunto }}</span>
+            {% if c.n_resp > 0 %}
+            <span class="cl-resp-badge">
+              <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
+                <path d="M1 2h12v8H8l-3 3v-3H1V2z" stroke="#9ca3af" stroke-width="1.2" stroke-linejoin="round"/>
+              </svg>
+              {{ c.n_resp }}
+            </span>
+            {% endif %}
+          </div>
+          {% if c.departamento %}<span class="cl-ticket-origem">{{ c.departamento.nome }}</span>{% endif %}
+        </td>
+
+        <td class="cl-col-usuario">
+          {% if c.aberto_por %}{{ c.aberto_por.get_full_name|default:c.aberto_por.username }}{% else %}<span style="color:var(--muted)">—</span>{% endif %}
+        </td>
+
+        <td class="ca-col-status">
+          <span class="ch-badge ch-badge-{{ c.status|status_color }}">{{ c.get_status_display }}</span>
+        </td>
+
+        <td class="cl-col-prio">
+          <span class="ch-badge ch-badge-{{ c.prioridade|prioridade_color }}">{{ c.get_prioridade_display }}</span>
+        </td>
+
+        {# ── Célula do agente com atribuição inline ── #}
+        <td class="ca-col-agente" onclick="event.stopPropagation()">
+          <div class="ca-assign-wrap" id="aw-{{ c.pk }}">
+
+            {% if c.agente %}
+            <div class="ca-agent-chip">
+              <span class="mc-avatar" style="width:26px;height:26px;font-size:10px">{{ c.agente|user_initials }}</span>
+              <span class="ca-agent-name">{{ c.agente.get_full_name|default:c.agente.username }}</span>
+              <button type="button" class="ca-reassign-btn" title="Reatribuir"
+                      onclick="toggleAssignMenu({{ c.pk }})">
+                <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+                  <path d="M11 2l3 3-8 8H3V10l8-8z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+            {% else %}
+            <button type="button" class="ca-assign-empty-btn"
+                    onclick="toggleAssignMenu({{ c.pk }})" title="Atribuir agente">
+              <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="5" r="2.5" stroke="currentColor" stroke-width="1.4"/>
+                <path d="M3 13c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              </svg>
+              Atribuir
+            </button>
+            {% endif %}
+
+            <div class="ca-assign-menu" id="am-{{ c.pk }}">
+              <div class="ca-assign-menu-head">Atribuir a</div>
+              {% for m in membros %}
+              <form method="post" action="{% url 'core:atribuir_chamados' %}">
+                {% csrf_token %}
+                <input type="hidden" name="ids" value="{{ c.pk }}">
+                <input type="hidden" name="agente_id" value="{{ m.pk }}">
+                <button type="submit" class="ca-member-opt {% if c.agente_id == m.pk %}active{% endif %}">
+                  <span class="mc-avatar" style="width:22px;height:22px;font-size:9px;flex-shrink:0">{{ m|user_initials }}</span>
+                  <span>{{ m.get_full_name|default:m.username }}</span>
+                  {% if c.agente_id == m.pk %}
+                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="margin-left:auto;flex-shrink:0">
+                    <path d="M2 6l3 3 5-5" stroke="var(--blue)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  {% endif %}
+                </button>
+              </form>
+              {% endfor %}
+              {% if c.agente %}
+              <div class="ca-assign-menu-sep"></div>
+              <form method="post" action="{% url 'core:atribuir_chamados' %}">
+                {% csrf_token %}
+                <input type="hidden" name="ids" value="{{ c.pk }}">
+                <input type="hidden" name="agente_id" value="">
+                <button type="submit" class="ca-member-opt ca-remove-opt">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                    <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                  </svg>
+                  Remover atribuição
+                </button>
+              </form>
+              {% endif %}
+            </div>
+
+          </div>
+        </td>
+
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="mc-empty-cell">
+          <div class="mc-empty">
+            <svg class="mc-empty-ico" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3">
+              <rect x="3" y="4" width="18" height="16" rx="2"/>
+              <path d="M7 9h10M7 13h6"/>
+            </svg>
+            <p class="mc-empty-title">Nenhum chamado encontrado</p>
+            <p class="mc-empty-sub">
+              Tente ajustar os filtros ou
+              <a href="{% url 'core:chamados_admin' %}">ver todos os chamados</a>.
+            </p>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="cl-pagination">
+    <span class="cl-page-info">
+      {{ page_obj.start_index }}–{{ page_obj.end_index }} de {{ page_obj.paginator.count }}
+    </span>
+    <div class="cl-page-btns">
+      {% if page_obj.has_previous %}
+      <a href="{% url_filtro page=page_obj.previous_page_number reset_page=False %}" class="cl-page-btn">‹</a>
+      {% else %}
+      <span class="cl-page-btn disabled">‹</span>
+      {% endif %}
+
+      {% for num in page_obj.paginator.page_range %}
+        {% if num == page_obj.number %}
+        <span class="cl-page-btn active">{{ num }}</span>
+        {% elif num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+        <a href="{% url_filtro page=num reset_page=False %}" class="cl-page-btn">{{ num }}</a>
+        {% endif %}
+      {% endfor %}
+
+      {% if page_obj.has_next %}
+      <a href="{% url_filtro page=page_obj.next_page_number reset_page=False %}" class="cl-page-btn">›</a>
+      {% else %}
+      <span class="cl-page-btn disabled">›</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+{# ── Barra de ação em massa (aparece ao selecionar linhas) ── #}
+<div class="ca-bulk-bar" id="caBulkBar">
+
+  <div class="ca-bulk-left">
+    <span class="ca-bulk-count">
+      <span id="caBulkCount">0</span> selecionado(s)
+    </span>
+    <button type="button" class="ca-bulk-desel" onclick="deselAll()" title="Desmarcar tudo">
+      <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+        <path d="M2 2l8 8M10 2L2 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="ca-bulk-actions">
+
+    {# Atribuir a membro — dropdown #}
+    <div class="ca-assign-wrap" id="caAssignBulkWrap">
+      <button type="button" class="ca-bulk-btn ca-bulk-btn-primary" id="caBulkAssignBtn"
+              onclick="toggleBulkMenu()">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="5" r="2.5" stroke="currentColor" stroke-width="1.4"/>
+          <path d="M3 13c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        Atribuir a membro
+        <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+          <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <div class="ca-assign-menu ca-assign-menu-up" id="caBulkAssignMenu">
+        <div class="ca-assign-menu-head">Atribuir selecionados a</div>
+        {% for m in membros %}
+        <button type="button" class="ca-member-opt" onclick="submitAtribuir('{{ m.pk }}')">
+          <span class="mc-avatar" style="width:22px;height:22px;font-size:9px;flex-shrink:0">{{ m|user_initials }}</span>
+          <span>{{ m.get_full_name|default:m.username }}</span>
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# Atribuir a mim #}
+    <form method="post" action="{% url 'core:atribuir_chamados' %}" id="formAtribuirMim">
+      {% csrf_token %}
+      <input type="hidden" name="ids" id="idsMim">
+      <input type="hidden" name="acao" value="atribuir_a_mim">
+      <button type="button" class="ca-bulk-btn" onclick="submeterAcao('atribuir_a_mim')">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="5" r="2.5" stroke="currentColor" stroke-width="1.4"/>
+          <path d="M3 13c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          <path d="M12 10l1.5 1.5L16 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Atribuir a mim
+      </button>
+    </form>
+
+    {# Exportar #}
+    <form method="post" action="{% url 'core:atribuir_chamados' %}" id="formExportar">
+      {% csrf_token %}
+      <input type="hidden" name="ids" id="idsExportar">
+      <input type="hidden" name="acao" value="exportar">
+      <button type="button" class="ca-bulk-btn" onclick="submeterAcao('exportar')">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <path d="M8 2v8M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M3 11v2h10v-2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        Exportar
+      </button>
+    </form>
+
+    {# Excluir #}
+    <form method="post" action="{% url 'core:atribuir_chamados' %}" id="formExcluir">
+      {% csrf_token %}
+      <input type="hidden" name="ids" id="idsExcluir">
+      <input type="hidden" name="acao" value="excluir">
+      <button type="button" class="ca-bulk-btn ca-bulk-btn-danger" onclick="confirmarExclusao()">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <path d="M3 4h10M6 4V2h4v2M5 4v9h6V4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Excluir
+      </button>
+    </form>
+
+    {# Form para atribuição em massa via dropdown #}
+    <form method="post" action="{% url 'core:atribuir_chamados' %}" id="formAtribuirMembro" style="display:none">
+      {% csrf_token %}
+      <input type="hidden" name="ids" id="idsMembro">
+      <input type="hidden" name="agente_id" id="agenteIdMembro">
+    </form>
+
+  </div>
+</div>
+
+<script>
+(function () {
+
+  /* ── Seleção de linhas ── */
+  const bulkBar   = document.getElementById('caBulkBar');
+  const countEl   = document.getElementById('caBulkCount');
+
+  function getChecked() {
+    return [...document.querySelectorAll('.row-check:checked')];
+  }
+
+  function updateBulkBar() {
+    const n = getChecked().length;
+    countEl.textContent = n;
+    bulkBar.classList.toggle('visible', n > 0);
+    document.getElementById('selectAll').indeterminate =
+      n > 0 && n < document.querySelectorAll('.row-check').length;
+    document.getElementById('selectAll').checked =
+      n > 0 && n === document.querySelectorAll('.row-check').length;
+  }
+
+  window.toggleAll = function (cb) {
+    document.querySelectorAll('.row-check').forEach(c => {
+      c.checked = cb.checked;
+      c.closest('tr').classList.toggle('selected', cb.checked);
+    });
+    updateBulkBar();
+  };
+
+  window.toggleRow = function (cb) {
+    cb.closest('tr').classList.toggle('selected', cb.checked);
+    updateBulkBar();
+  };
+
+  window.deselAll = function () {
+    document.querySelectorAll('.row-check').forEach(c => {
+      c.checked = false;
+      c.closest('tr').classList.remove('selected');
+    });
+    document.getElementById('selectAll').checked = false;
+    updateBulkBar();
+  };
+
+  function getIds() {
+    return getChecked().map(c => c.value).join(',');
+  }
+
+  /* ── Menus de atribuição por linha ── */
+  function positionMenu(menu, anchor) {
+    const rect = anchor.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const menuH = Math.min(280, menu.scrollHeight || 280);
+    if (spaceBelow >= menuH + 8 || spaceBelow >= 120) {
+      menu.style.top  = (rect.bottom + 4) + 'px';
+      menu.style.bottom = 'auto';
+    } else {
+      menu.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+      menu.style.top  = 'auto';
+    }
+    const right = rect.right;
+    const menuW = 200;
+    if (right - menuW < 8) {
+      menu.style.left = Math.max(8, rect.left) + 'px';
+    } else {
+      menu.style.left = (right - menuW) + 'px';
+    }
+    menu.style.width = menuW + 'px';
+  }
+
+  window.toggleAssignMenu = function (pk) {
+    const menu   = document.getElementById('am-' + pk);
+    const anchor = document.querySelector('#aw-' + pk + ' .ca-reassign-btn, #aw-' + pk + ' .ca-assign-empty-btn');
+    if (!menu || !anchor) return;
+    const isOpen = menu.classList.contains('open');
+    closeAllMenus();
+    if (!isOpen) {
+      positionMenu(menu, anchor);
+      menu.classList.add('open');
+    }
+  };
+
+  function closeAllMenus() {
+    document.querySelectorAll('.ca-assign-menu.open').forEach(m => m.classList.remove('open'));
+    document.getElementById('caBulkAssignMenu').classList.remove('open');
+  }
+
+  window.addEventListener('scroll', function () {
+    const open = document.querySelector('.ca-assign-menu.open:not(#caBulkAssignMenu)');
+    if (open) {
+      const pk = open.id.replace('am-', '');
+      const anchor = document.querySelector('#aw-' + pk + ' .ca-reassign-btn, #aw-' + pk + ' .ca-assign-empty-btn');
+      if (anchor) positionMenu(open, anchor);
+    }
+  }, true);
+  window.addEventListener('resize', function () {
+    const open = document.querySelector('.ca-assign-menu.open:not(#caBulkAssignMenu)');
+    if (open) closeAllMenus();
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.ca-assign-wrap')) closeAllMenus();
+  });
+
+  /* Abrir/fechar dropdown de filtros */
+  document.querySelectorAll('.cl-filter-dd-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const dd = btn.closest('.cl-filter-dd');
+      const open = dd.classList.contains('open');
+      document.querySelectorAll('.cl-filter-dd.open').forEach(d => d.classList.remove('open'));
+      if (!open) dd.classList.add('open');
+    });
+  });
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.cl-filter-dd.open').forEach(d => d.classList.remove('open'));
+  });
+
+  /* ── Menu de atribuição em massa ── */
+  window.toggleBulkMenu = function () {
+    const menu = document.getElementById('caBulkAssignMenu');
+    menu.classList.toggle('open');
+  };
+
+  window.submitAtribuir = function (agenteId) {
+    const ids = getIds();
+    if (!ids) { alert('Selecione ao menos um chamado.'); return; }
+    document.getElementById('idsMembro').value    = ids;
+    document.getElementById('agenteIdMembro').value = agenteId;
+    document.getElementById('formAtribuirMembro').submit();
+  };
+
+  window.submeterAcao = function (acao) {
+    const ids = getIds();
+    if (!ids) { alert('Selecione ao menos um chamado.'); return; }
+    if (acao === 'atribuir_a_mim') {
+      document.getElementById('idsMim').value = ids;
+      document.getElementById('formAtribuirMim').submit();
+    } else if (acao === 'exportar') {
+      document.getElementById('idsExportar').value = ids;
+      document.getElementById('formExportar').submit();
+    }
+  };
+
+  window.confirmarExclusao = function () {
+    const ids = getIds();
+    if (!ids) { alert('Selecione ao menos um chamado.'); return; }
+    if (typeof GModal !== 'undefined') {
+      GModal.confirm(
+        'Excluir chamados',
+        'Esta ação é permanente e não pode ser desfeita.',
+        function () {
+          document.getElementById('idsExcluir').value = ids;
+          document.getElementById('formExcluir').submit();
+        },
+        'Excluir'
+      );
+    } else if (confirm('Excluir os chamados selecionados? Esta ação não pode ser desfeita.')) {
+      document.getElementById('idsExcluir').value = ids;
+      document.getElementById('formExcluir').submit();
+    }
+  };
+
+})();
+</script>
+
+{% endblock %}

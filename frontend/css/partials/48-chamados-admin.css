@@ -1,0 +1,389 @@
+/* =====================================================================
+   48 — Chamados Admin: fila de atendimento
+   Prefixo: ca-
+   ===================================================================== */
+
+/* ── Segmented status pills ── */
+.ca-seg-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 24px 0;
+  flex-wrap: wrap;
+}
+
+.ca-seg-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background .12s, color .12s, border-color .12s;
+  white-space: nowrap;
+}
+
+.ca-seg-pill:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.ca-seg-pill.active {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+
+.ca-seg-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ca-seg-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 1px 7px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.ca-seg-pill.active .ca-seg-count {
+  background: #f1f5f9;
+}
+
+.ca-seg-count-alert {
+  background: #fef2f2;
+  color: var(--red);
+}
+
+.ca-seg-pill.ca-seg-alert.active .ca-seg-count {
+  background: #fef2f2;
+  color: var(--red);
+}
+
+/* ── Limpar filtros ── */
+.ca-clear-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: color .12s, background .12s;
+  white-space: nowrap;
+}
+
+.ca-clear-link:hover {
+  color: var(--text);
+  background: var(--bg);
+}
+
+/* ── Colunas específicas da tabela admin ── */
+.ca-col-status {
+  white-space: nowrap;
+  width: 120px;
+}
+
+.ca-col-agente {
+  width: 180px;
+}
+
+/* ── Linha selecionada ── */
+tbody tr.selected {
+  background: #eff6ff;
+}
+
+/* ── Célula do agente — chip e botão ── */
+.ca-assign-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+.ca-agent-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 3px 6px 3px 3px;
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  max-width: 160px;
+}
+
+.ca-agent-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100px;
+}
+
+.ca-reassign-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background .1s, color .1s;
+}
+
+.ca-reassign-btn:hover {
+  background: var(--line);
+  color: var(--text);
+}
+
+.ca-assign-empty-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px dashed var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color .12s, color .12s, background .12s;
+}
+
+.ca-assign-empty-btn:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+  background: #eff6ff;
+}
+
+/* ── Menu dropdown de atribuição (inline por linha) ── */
+/* position:fixed para escapar de overflow:hidden na tabela */
+.ca-assign-menu {
+  display: none;
+  position: fixed;
+  z-index: 9000;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.12);
+  min-width: 190px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.ca-assign-menu.open {
+  display: block;
+}
+
+.ca-assign-menu-head {
+  padding: 8px 12px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--muted);
+}
+
+.ca-assign-menu-sep {
+  height: 1px;
+  background: var(--line);
+  margin: 4px 8px;
+}
+
+/* ── Opções de membro ── */
+.ca-member-form {
+  margin: 0;
+}
+
+.ca-member-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 12px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background .1s;
+  white-space: nowrap;
+}
+
+.ca-member-opt:hover {
+  background: var(--bg);
+}
+
+.ca-member-opt.active {
+  background: #eff6ff;
+  color: var(--blue);
+}
+
+.ca-remove-opt {
+  color: var(--red);
+  gap: 8px;
+}
+
+.ca-remove-opt:hover {
+  background: #fef2f2;
+}
+
+/* ── Barra de ações em massa ── */
+.ca-bulk-bar {
+  position: fixed;
+  bottom: -80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 900;
+  background: #1e293b;
+  color: #f1f5f9;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.3);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  transition: bottom .22s cubic-bezier(.34,1.56,.64,1);
+  min-width: 500px;
+  max-width: 90vw;
+}
+
+.ca-bulk-bar.visible {
+  bottom: 24px;
+}
+
+.ca-bulk-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.ca-bulk-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f1f5f9;
+  white-space: nowrap;
+}
+
+.ca-bulk-desel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.2);
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background .1s, color .1s;
+}
+
+.ca-bulk-desel:hover {
+  background: rgba(255,255,255,.1);
+  color: #f1f5f9;
+}
+
+.ca-bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ca-bulk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.08);
+  color: #f1f5f9;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .12s, border-color .12s;
+}
+
+.ca-bulk-btn:hover {
+  background: rgba(255,255,255,.14);
+  border-color: rgba(255,255,255,.3);
+}
+
+.ca-bulk-btn-primary {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+
+.ca-bulk-btn-primary:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.ca-bulk-btn-danger {
+  background: transparent;
+  border-color: rgba(220,38,38,.4);
+  color: #fca5a5;
+}
+
+.ca-bulk-btn-danger:hover {
+  background: rgba(220,38,38,.15);
+  border-color: rgba(220,38,38,.6);
+  color: #fecaca;
+}
+
+/* Menu de atribuição em massa (sobe em vez de descer) */
+#caBulkAssignMenu {
+  bottom: calc(100% + 6px);
+  top: auto;
+  left: 0;
+}
+
+/* ── Extensões dos filtros de dropdown ── */
+.cl-filter-opt .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cl-filter-opt .opt-count {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 1px 6px;
+}

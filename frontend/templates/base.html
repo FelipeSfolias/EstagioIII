@@ -109,6 +109,9 @@
           <a href="{% url 'core:chamados_todos' %}" class="{% if request.resolver_match.url_name == 'chamados_todos' %}active{% endif %}">
             <span class="i"><svg><use href="#i-list"/></svg></span> Todos os Chamados
           </a>
+          <a href="{% url 'core:chamados_admin' %}" class="{% if request.resolver_match.url_name == 'chamados_admin' or request.resolver_match.url_name == 'atribuir_chamados' %}active{% endif %}">
+            <span class="i"><svg><use href="#i-list"/></svg></span> Fila de Atendimento
+          </a>
           <a href="{% url 'core:chamados_indicadores' %}" class="{% if request.resolver_match.url_name == 'chamados_indicadores' %}active{% endif %}">
             <span class="i"><svg><use href="#i-chart"/></svg></span> Indicadores
           </a>
@@ -129,6 +132,9 @@
           </a>
           <a href="{% url 'core:chamados_todos' %}" class="{% if request.resolver_match.url_name == 'chamados_todos' %}active{% endif %}">
             <span class="i"><svg><use href="#i-list"/></svg></span> Todos os Chamados
+          </a>
+          <a href="{% url 'core:chamados_admin' %}" class="{% if request.resolver_match.url_name == 'chamados_admin' or request.resolver_match.url_name == 'atribuir_chamados' %}active{% endif %}">
+            <span class="i"><svg><use href="#i-list"/></svg></span> Fila de Atendimento
           </a>
           <a href="{% url 'core:chamados_indicadores' %}" class="{% if request.resolver_match.url_name == 'chamados_indicadores' %}active{% endif %}">
             <span class="i"><svg><use href="#i-chart"/></svg></span> Indicadores

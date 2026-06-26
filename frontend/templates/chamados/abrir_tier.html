@@ -702,6 +702,13 @@
       return (parts[0] || '?')[0].toUpperCase();
     }
 
+    function positionDropdown() {
+      const rect = userSearch.getBoundingClientRect();
+      userDropdown.style.top   = (rect.bottom + 4) + 'px';
+      userDropdown.style.left  = rect.left + 'px';
+      userDropdown.style.width = rect.width + 'px';
+    }
+
     function showDropdown(results) {
       userDropdown.innerHTML = '';
       if (!results.length) {
@@ -727,6 +734,7 @@
           userDropdown.appendChild(el);
         });
       }
+      positionDropdown();
       userDropdown.classList.add('open');
       userSearch.setAttribute('aria-expanded', 'true');
     }
@@ -828,6 +836,13 @@
       if (!e.target.closest('#user-search-wrap') && !e.target.closest('#user-dropdown')) {
         hideDropdown();
       }
+    });
+
+    window.addEventListener('scroll', function () {
+      if (userDropdown.classList.contains('open')) positionDropdown();
+    }, true);
+    window.addEventListener('resize', function () {
+      if (userDropdown.classList.contains('open')) positionDropdown();
     });
   }
 

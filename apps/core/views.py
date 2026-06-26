@@ -1087,21 +1087,26 @@ def kanban_card_mover(request, pk):
 @login_required
 @tier_required("suporte", "admin")
 def projetos_indicadores(request):
-    _seed_kanban_colunas()
-    cards = KanbanCard.objects.select_related("coluna").all()
-    total = cards.count()
+    hoje = timezone.now()
+    cartoes = Cartao.objects.select_related("lista").all()
+    total = cartoes.count()
 
-    concluidos   = cards.filter(coluna__chave="concluido").count()
-    em_andamento = cards.filter(coluna__chave="em_andamento").count()
-    nao_iniciados = cards.filter(coluna__chave="nao_iniciado").count()
-    atrasados = sum(1 for c in cards if c.atrasado)
-    no_prazo  = max(em_andamento - atrasados, 0)
+    concluidos    = cartoes.filter(concluido=True).count()
+    atrasados     = cartoes.filter(
+        concluido=False, data_entrega__isnull=False, data_entrega__lt=hoje
+    ).count()
+    em_andamento  = cartoes.filter(concluido=False, progresso__gt=0).exclude(
+        data_entrega__isnull=False, data_entrega__lt=hoje
+    ).count()
+    nao_iniciados = cartoes.filter(concluido=False, progresso=0).exclude(
+        data_entrega__isnull=False, data_entrega__lt=hoje
+    ).count()
     pct_concluido = round(concluidos / total * 100, 1) if total else 0.0
 
     kpis = {
         "total": total, "concluidos": concluidos, "em_andamento": em_andamento,
         "nao_iniciados": nao_iniciados, "atrasados": atrasados,
-        "no_prazo": no_prazo, "pct_concluido": pct_concluido,
+        "no_prazo": em_andamento, "pct_concluido": pct_concluido,
     }
 
     concl_segments = [
@@ -1109,34 +1114,48 @@ def projetos_indicadores(request):
         {"label": "Demais",     "pct": round(100 - pct_concluido, 1), "color": "#e5e7eb"},
     ]
 
-    color_map = {"nao_iniciado": "#94a3b8", "em_andamento": "#60a5fa", "concluido": "#10b981"}
-    status_segs = []
-    for col in KanbanColuna.objects.annotate(count=db_models.Count("cards")):
-        if col.count:
-            pct = round(col.count / total * 100, 1) if total else 0.0
-            status_segs.append({"label": col.titulo, "count": col.count, "pct": pct,
-                                 "color": color_map.get(col.chave, "#a78bfa")})
-
-    resp_qs = cards.values("responsavel").annotate(
-        total=db_models.Count("id"),
-        concl=db_models.Count("id", filter=db_models.Q(coluna__chave="concluido")),
-    ).order_by("-total")
-    por_resp = [
-        {"resp": r["responsavel"], "total": r["total"], "concl": r["concl"],
-         "pct": round(r["concl"] / r["total"] * 100, 1) if r["total"] else 0.0}
-        for r in resp_qs if r["responsavel"]
+    status_qs = (
+        cartoes.values("lista__nome", "lista__cor")
+        .annotate(count=db_models.Count("id"))
+        .order_by("-count")
+    )
+    status_segs = [
+        {
+            "label": row["lista__nome"] or "Sem lista",
+            "count": row["count"],
+            "pct":   round(row["count"] / total * 100, 1) if total else 0.0,
+            "color": row["lista__cor"] or "#a78bfa",
+        }
+        for row in status_qs if row["count"]
     ]
-    por_resp.sort(key=lambda x: (-x["pct"], x["resp"]))
 
-    area_qs = cards.values("area").annotate(
+    resp_data: dict = {}
+    for cartao in cartoes.prefetch_related("membros"):
+        for membro in cartao.membros.all():
+            nome = membro.get_full_name() or membro.username
+            d = resp_data.setdefault(nome, {"total": 0, "concl": 0})
+            d["total"] += 1
+            if cartao.concluido:
+                d["concl"] += 1
+    por_resp = sorted(
+        [
+            {"resp": nome, "total": d["total"], "concl": d["concl"],
+             "pct": round(d["concl"] / d["total"] * 100, 1) if d["total"] else 0.0}
+            for nome, d in resp_data.items()
+        ],
+        key=lambda x: (-x["pct"], x["resp"]),
+    )
+
+    area_qs = cartoes.values("area").annotate(
         total=db_models.Count("id"),
-        anda=db_models.Count("id", filter=db_models.Q(coluna__chave="em_andamento")),
-        concl=db_models.Count("id", filter=db_models.Q(coluna__chave="concluido")),
+        anda=db_models.Count("id", filter=db_models.Q(concluido=False, progresso__gt=0)),
+        concl=db_models.Count("id", filter=db_models.Q(concluido=True)),
     ).order_by("-total")
     por_area = [
-        {"area": a["area"], "total": a["total"], "anda": a["anda"], "concl": a["concl"],
+        {"area": a["area"] or "Sem área", "total": a["total"],
+         "anda": a["anda"], "concl": a["concl"],
          "pct": round(a["total"] / total * 100, 1) if total else 0.0}
-        for a in area_qs if a["area"]
+        for a in area_qs
     ]
 
     return render(request, "projetos/indicadores.html", {
@@ -1801,6 +1820,172 @@ def chamado_atualizar(request, cid: int):
 
     messages.success(request, "Chamado atualizado.")
     return redirect("core:chamado_detalhe", cid=chamado.pk)
+
+
+# ============================================================
+# CHAMADOS ADMIN — fila de atendimento (suporte + admin)
+# ============================================================
+
+_GRUPO_STATUS_ADMIN = {
+    "aberto":         ["aberto"],
+    "em_atendimento": ["em_atendimento"],
+    "fechado":        ["resolvido", "fechado"],
+}
+
+
+@login_required
+@tier_required("suporte", "admin")
+def chamados_admin(request):
+    base = (
+        Chamado.objects
+        .select_related("aberto_por", "agente", "departamento")
+        .annotate(n_resp=db_models.Count(
+            "historico",
+            filter=db_models.Q(historico__tipo="comentario"),
+        ))
+    )
+
+    contagens = {k: base.filter(status__in=v).count() for k, v in _GRUPO_STATUS_ADMIN.items()}
+    contagens["total"] = base.count()
+    contagens["sem_agente"] = base.filter(
+        agente__isnull=True, status__in=["aberto", "em_atendimento"]
+    ).count()
+
+    qs = base
+    status_f = (request.GET.get("status") or "aberto").strip()
+    if status_f in _GRUPO_STATUS_ADMIN:
+        qs = qs.filter(status__in=_GRUPO_STATUS_ADMIN[status_f])
+    elif status_f != "todos":
+        status_f = "aberto"
+        qs = qs.filter(status__in=["aberto"])
+
+    prioridade_f = (request.GET.get("prioridade") or "").strip()
+    if prioridade_f in [p[0] for p in Chamado.PRIORIDADES]:
+        qs = qs.filter(prioridade=prioridade_f)
+    else:
+        prioridade_f = ""
+
+    fila_f = (request.GET.get("fila") or "").strip()
+    if fila_f.isdigit():
+        qs = qs.filter(departamento_id=int(fila_f))
+    else:
+        fila_f = ""
+
+    agente_f = (request.GET.get("agente") or "").strip()
+    if agente_f == "0":
+        qs = qs.filter(agente__isnull=True)
+    elif agente_f.isdigit():
+        qs = qs.filter(agente_id=int(agente_f))
+    else:
+        agente_f = ""
+
+    q = (request.GET.get("q") or "").strip()
+    if q:
+        qs = qs.filter(
+            db_models.Q(assunto__icontains=q)
+            | db_models.Q(departamento__nome__icontains=q)
+            | db_models.Q(aberto_por__first_name__icontains=q)
+            | db_models.Q(aberto_por__last_name__icontains=q)
+            | db_models.Q(aberto_por__username__icontains=q)
+            | (db_models.Q(pk=int(q)) if q.isdigit() else db_models.Q())
+        )
+
+    ordem_campo = (request.GET.get("ordem") or "atualizado_em").strip()
+    ordem_dir   = (request.GET.get("dir")   or "desc").strip()
+    _campos_validos = {"id", "atualizado_em", "prioridade", "assunto", "aberto_em"}
+    if ordem_campo not in _campos_validos:
+        ordem_campo = "atualizado_em"
+    if ordem_dir not in ("asc", "desc"):
+        ordem_dir = "desc"
+    qs = qs.order_by(ordem_campo if ordem_dir == "asc" else f"-{ordem_campo}")
+
+    page_obj = Paginator(qs, 20).get_page(request.GET.get("page"))
+
+    membros = User.objects.filter(
+        groups__name__in=["admin", "suporte"]
+    ).distinct().order_by("first_name", "username")
+
+    filas = (
+        Departamento.objects
+        .filter(ativo=True)
+        .annotate(total=db_models.Count(
+            "chamados",
+            filter=db_models.Q(chamados__status__in=["aberto", "em_atendimento"]),
+        ))
+        .order_by("nome")
+    )
+
+    return render(request, "chamados/chamados_admin.html", {
+        "page_obj":    page_obj,
+        "contagens":   contagens,
+        "status_f":    status_f,
+        "membros":     membros,
+        "filas":       filas,
+        "q":           q,
+        "prioridade_f": prioridade_f,
+        "fila_f":      fila_f,
+        "agente_f":    agente_f,
+        "ordem":       ordem_campo,
+        "dir":         ordem_dir,
+    })
+
+
+@login_required
+@tier_required("suporte", "admin")
+@require_POST
+def atribuir_chamados(request):
+    ids        = [i for i in request.POST.getlist("ids") if i.isdigit()]
+    agente_id  = (request.POST.get("agente_id") or "").strip()
+    acao       = (request.POST.get("acao")       or "").strip()
+    referer    = request.META.get("HTTP_REFERER") or ""
+
+    if acao == "exportar":
+        import csv
+        from django.http import HttpResponse as _HR
+        qs_exp = Chamado.objects.filter(pk__in=ids).select_related("aberto_por", "agente", "departamento")
+        resp = _HR(content_type="text/csv; charset=utf-8-sig")
+        resp["Content-Disposition"] = 'attachment; filename="chamados.csv"'
+        writer = csv.writer(resp)
+        writer.writerow(["ID", "Assunto", "Status", "Prioridade", "Departamento", "Solicitante", "Agente", "Abertura"])
+        for c in qs_exp:
+            writer.writerow([
+                c.pk, c.assunto, c.get_status_display(), c.get_prioridade_display(),
+                c.departamento.nome if c.departamento else "",
+                (c.aberto_por.get_full_name() or c.aberto_por.username) if c.aberto_por else "",
+                (c.agente.get_full_name()     or c.agente.username)     if c.agente    else "",
+                c.aberto_em.strftime("%d/%m/%Y %H:%M"),
+            ])
+        return resp
+
+    if acao == "excluir":
+        count = Chamado.objects.filter(pk__in=ids).count()
+        Chamado.objects.filter(pk__in=ids).delete()
+        messages.success(request, f"{count} chamado(s) excluído(s).")
+        return redirect(referer or "core:chamados_admin")
+
+    if acao == "atribuir_a_mim":
+        qs = Chamado.objects.filter(pk__in=ids)
+        qs.update(agente=request.user)
+        qs.filter(status="aberto").update(status="em_atendimento")
+        messages.success(request, f"{len(ids)} chamado(s) atribuído(s) a você.")
+        return redirect(referer or "core:chamados_admin")
+
+    if agente_id and agente_id.isdigit():
+        try:
+            agente = User.objects.get(pk=int(agente_id), groups__name__in=["admin", "suporte"])
+        except User.DoesNotExist:
+            messages.error(request, "Agente inválido ou sem permissão.")
+            return redirect(referer or "core:chamados_admin")
+        qs = Chamado.objects.filter(pk__in=ids)
+        qs.update(agente=agente)
+        qs.filter(status="aberto").update(status="em_atendimento")
+        nome_agente = agente.get_full_name() or agente.username
+        messages.success(request, f"{len(ids)} chamado(s) atribuído(s) a {nome_agente}.")
+    else:
+        Chamado.objects.filter(pk__in=ids).update(agente=None)
+        messages.success(request, f"{len(ids)} chamado(s) com atribuição removida.")
+
+    return redirect(referer or "core:chamados_admin")
 
 
 @login_required
